@@ -1,0 +1,10 @@
+V2ray_Domain {
+  root /srv/www
+  tls User_Name@gmail.com
+  gzip
+  timeouts none
+  proxy /V2ray_Path 127.0.0.1:V2ray_Port {
+    websocket
+    header_upstream -Origin
+  }
+}
