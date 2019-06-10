@@ -223,7 +223,7 @@ Install_Caddy() {
 	else
 		echo -e "\r$prompt_error 自动安装Caddy失败！不是i386或x86_64系统" && exit 1
 	fi
-	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null` && echo -n "正在下载Caddy安装包..." ]] && echo -e "\r$prompt_info Caddy安装包下载完成"
+	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null && echo -n "正在下载Caddy安装包..."` ]] && echo -e "\r$prompt_info Caddy安装包下载完成"
 
 	echo -n "正在解压Caddy安装包..."
 	mkdir -p $caddy_dir
