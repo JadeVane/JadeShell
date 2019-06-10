@@ -69,15 +69,18 @@ Pre_Config() {
 		$cmd update -y  1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
 		echo -n "开始安装必要组件..."
 		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]
-		echo -n "开始同步时间..."
+		echo -n "开始更新至上海时区..."
 		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 1>/dev/null 2>/dev/null
+		echo -ne "\r${prompt_info} 成功更新至上海时区\n开始同步时间..."
 		ntpdate cn.pool.ntp.org  1>/dev/null 2>/dev/null
 		hwclock -w 1>/dev/null 2>/dev/null
+		echo -ne "\r${prompt_info} 成功同步时间\n正在设置自动更新时间任务..."
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
 		systemctl restart crond
+		echo -e "\r${prompt_info} 自动更新时间任务设置完成"
 		pre_config_status=1
-		echo -e "\r$prompt_info 时间同步完成"
+		echo -e "$prompt_info 时间同步完成"
 	fi
 }
 
@@ -102,6 +105,58 @@ V2ray_Config_Reader() {
 	echo
 }
 
+SSR_Config_Reader() {
+	display_info="--------------------- SSR配置 --------------------\n"
+	echo $display_info
+	echo -ne "1. none（默认）\n2. rc4-md5\n3. aes-256-cfb\n4. chacha20\n\n请选择加密方式："
+	read -n1 Ss_Method
+	case $Ss_Method in
+		1) Ss_Method="none";;
+		2) Ss_Method="rc4-md5";;
+		3) Ss_Method="aes-256-cfb";;
+		4) Ss_Method="chacha20";;
+		*) Ss_Method=$Ss_Method;;
+	esac
+	clear
+	display_info="$display_info     已选择加密方式（默认：none     ）：$Ss_Method\n"
+	echo -ne "$display_info--------------------\n1. origin（默认）\n2. auth_sha1_v4\n3. auth_aes128_md5\n4. auth_chain_a\n\n请选择传输协议："
+	read -n1 Ss_Protocol
+	case $Ss_Protocol in
+		1) Ss_Protocol="origin";;
+		2) Ss_Protocol="auth_sha1_v4";;
+		3) Ss_Protocol="auth_aes128_md5";;
+		4) Ss_Protocol="auth_chain_a";;
+		*) Ss_Protocol=$Ss_Protocol;;
+	esac
+	clear
+	display_info="$display_info     已选择传输协议（默认：origin   ）：$Ss_Protocol\n"
+	echo -ne "$display_info--------------------\n1. plain（默认）\n2. http_simple\n3. http_post\n4. tls1.2_ticket_auth\n\n请选择混淆方式："
+	read -n1 Ss_Obfs
+	case $Ss_Obfs in
+		1) Ss_Obfs="plain";;
+		2) Ss_Obfs="http_simple";;
+		3) Ss_Obfs="http_post";;
+		4) Ss_Obfs="tls1.2_ticket_auth";;
+		*) Ss_Obfs=$Ss_Obfs;;
+	esac
+	clear
+	display_info="$display_info     已选择混淆方式（默认：plain    ）：$Ss_Obfs"
+	echo -e "$display_info"
+	read -p "            Node ID（默认：1        ）：" Node_Id
+	read -p "       流量计算比例（默认：1        ）：" V2ray_Transfer_Ratio
+    read -p "     是否强制单端口（默认：否  ）[y/n]：" Ss_Single_Port_Enable
+    case $Ss_Single_Port_Enable in
+    	y) Ss_Single_Port_Enable="true";;
+		*) Ss_Single_Port_Enable="false";;
+	esac
+	read -p "             端口号（默认：8080     ）：" Ss_Single_Port
+	read -p "           认证密码（默认：hello    ）：" Ss_Password
+	read -p "     限制使用设备数（默认：不限制   ）：" Ss_Online_Limit
+	[[ -n $Ss_Online_Limit ]] && Ss_Online_Limit="${Ss_Online_Limit}#"
+	read -p "     用户限速值(K)：(默认：不限制   ）：" Ss_Speed_Limit
+	echo
+}
+
 Httpd_Remove_judgment(){
 	echo -ne "----------------------- ${red}警告${none} ---------------------\n检测到已安装httpd/apache，Caddy可能与httpd冲突，所以在安装caddy过程中会卸载httpd，请选择：\n------------------------------\n${green}y. ${none}卸载httpd并继续安装Caddy\n${green}n. ${none}取消安装Caddy并返回主菜单\n\n${green}q. ${none}退出\n------------------------------\n是否继续？[y/n/q]："
     read -n1 yn
@@ -114,7 +169,91 @@ Httpd_Remove_judgment(){
     echo
 }
 
-Firewall_Setting(){}
+Firewall_Setting() {
+	echo "------------------- 防火墙配置 -------------------"
+	if command -v firewall-cmd 2>&1 1>/dev/null; then
+		echo -e "${prompt_info} 开始进行firewalld防火墙配置"
+		systemctl status firewalld 2>&1 1>/dev/null
+		if [ $? -eq 0 ]; then
+			firewall-cmd --permanent --zone=public --remove-port=443/tcp 2>&1 1>/dev/null
+			firewall-cmd --permanent --zone=public --remove-port=80/tcp 2>&1 1>/dev/null
+			firewall-cmd --permanent --zone=public --add-port=443/tcp 2>&1 1>/dev/null
+			firewall-cmd --permanent --zone=public --add-port=80/tcp 2>&1 1>/dev/null
+			echo -e "$prompt_info 已放行端口：80, 443"
+			if [[ $V2ray_Port ]]; then
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp 2>&1 1>/dev/null
+				firewall-cmd --reload
+				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
+			fi
+			if [[ $Ss_Single_Port ]]; then
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp 2>&1 1>/dev/null
+				firewall-cmd --reload
+				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
+			fi
+		else
+			echo -e "$prompt_warning firewalld似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
+		fi
+		echo -e "$prompt_info firewalld防火墙规则配置完成"
+	elif command -v iptables 2>&1 1>/dev/null; then
+		echo -e "${prompt_info} 开始进行iptables防火墙配置"
+		/etc/init.d/iptables status 2>&1 1>/dev/null
+		if [ $? -eq 0 ]; then
+			iptables -D INPUT -p tcp --dport 443 -j ACCEPT
+			iptables -D INPUT -p tcp --dport 80 -j ACCEPT
+			iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+			iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+			ip6tables -D INPUT -p tcp --dport 443 -j ACCEPT
+			ip6tables -D INPUT -p tcp --dport 80 -j ACCEPT
+			ip6tables -A INPUT -p tcp --dport 443 -j ACCEPT
+			ip6tables -A INPUT -p tcp --dport 80 -j ACCEPT
+			[[ $? -ne 0 ]] && echo -e "$prompt_info 已放行端口：80, 443"
+			iptables -L -n | grep -i ${V2ray_Port} 2>&1 1>/dev/null
+			if [ $? -ne 0 ]; then
+				iptables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				iptables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				iptables -D INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				iptables -A INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -D INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -A INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				/etc/init.d/iptables save
+				/etc/init.d/iptables restart
+				/etc/init.d/ip6tables save
+				/etc/init.d/ip6tables restart
+			else
+				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
+			fi
+			iptables -L -n | grep -i ${Ss_Single_Port} > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				iptables -D INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				iptables -A INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				iptables -D INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				iptables -A INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -D INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -A INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -D INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -A INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				/etc/init.d/iptables save
+				/etc/init.d/iptables restart
+				/etc/init.d/ip6tables save
+				/etc/init.d/ip6tables restart
+			else
+				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
+			fi
+		else
+			echo -e "$prompt_warning iptables似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
+		fi
+		echo -e "$prompt_info iptables防火墙规则配置完成"
+	fi
+	echo -e "$prompt_info 防火墙规则配置完成\n"
+}
 
 Install_Caddy() {
 	echo "-------------------- 安装Caddy -------------------"
@@ -198,97 +337,7 @@ Install_Caddy() {
 	systemctl restart caddy
 }
 
-#============ 菜单选项 ============
-
-
-Install_V2ray() {
-	Pre_Config
-	V2ray_Config_Reader
-	Db_Config_Reader
-	Firewall_Setting
-	echo "-------------------- V2Ray安装 -------------------"
-	echo -n "开始安装V2ray..."
-	[[ `bash <(curl -L -s https://install.direct/go.sh) 1>/dev/null 2>/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
-
-	echo -n "开始获取V2ray配置文件..."
-	[[ `wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null` ]] && echo -e "${prompt_info} 获取V2ray配置文件成功"
-	echo -n "开始配置V2ray..."
-	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
-			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
-			-e "s/V2ray_Path/$V2ray_Path/g" \
-			-e "s/V2ray_Ssrpanel_Port/$V2ray_Ssrpanel_Port/g" \
-			-e "s/Node_Id/$Node_Id/g" \
-			-e "s/Db_Host/$Db_Host/g" \
-			-e "s/Db_Port/$Db_Port/g" \
-			-e "s/Db_Name/$Db_Name/g" \
-			-e "s/Db_User/$Db_User/g" \
-			-e "s/Db_Password/$Db_Password/g" config.json
-	[[ `mv -f onfig.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
-
-	[[ `systemctl restart v2ray 1>/dev/null 2>&1 && systemctl enable v2ray 1>/dev/null 2>&1` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ `echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1` ]]
-}
-
-Install_V2ray_Caddy() {
-	V2ray_Config_Reader
-	Db_Config_Reader
-	Firewall_Setting
-	Install_Caddy
-	Install_V2ray
-}
-
-Install_SSR(){
-	Pre_Config
-	display_info="--------------------- SSR配置 --------------------\n"
-	echo $display_info
-	echo -ne "1. none（默认）\n2. rc4-md5\n3. aes-256-cfb\n4. chacha20\n\n请选择加密方式："
-	read -n1 Ss_Method
-	case $Ss_Method in
-		1) Ss_Method="none";;
-		2) Ss_Method="rc4-md5";;
-		3) Ss_Method="aes-256-cfb";;
-		4) Ss_Method="chacha20";;
-		*) Ss_Method=$Ss_Method;;
-	esac
-	clear
-	display_info="$display_info     已选择加密方式（默认：none     ）：$Ss_Method\n"
-	echo -ne "$display_info--------------------\n1. origin（默认）\n2. auth_sha1_v4\n3. auth_aes128_md5\n4. auth_chain_a\n\n请选择传输协议："
-	read -n1 Ss_Protocol
-	case $Ss_Protocol in
-		1) Ss_Protocol="origin";;
-		2) Ss_Protocol="auth_sha1_v4";;
-		3) Ss_Protocol="auth_aes128_md5";;
-		4) Ss_Protocol="auth_chain_a";;
-		*) Ss_Protocol=$Ss_Protocol;;
-	esac
-	clear
-	display_info="$display_info     已选择传输协议（默认：origin   ）：$Ss_Protocol\n"
-	echo -ne "$display_info--------------------\n1. plain（默认）\n2. http_simple\n3. http_post\n4. tls1.2_ticket_auth\n\n请选择混淆方式："
-	read -n1 Ss_Obfs
-	case $Ss_Obfs in
-		1) Ss_Obfs="plain";;
-		2) Ss_Obfs="http_simple";;
-		3) Ss_Obfs="http_post";;
-		4) Ss_Obfs="tls1.2_ticket_auth";;
-		*) Ss_Obfs=$Ss_Obfs;;
-	esac
-	clear
-	display_info="$display_info     已选择混淆方式（默认：plain    ）：$Ss_Obfs"
-	echo -e "$display_info"
-	read -p "            Node ID（默认：1        ）：" Node_Id
-	read -p "       流量计算比例（默认：1        ）：" V2ray_Transfer_Ratio
-    read -p "     是否强制单端口（默认：否  ）[y/n]：" Ss_Single_Port_Enable
-    case $Ss_Single_Port_Enable in
-    	y) Ss_Single_Port_Enable="true";;
-		*) Ss_Single_Port_Enable="false";;
-	esac
-	read -p "             端口号（默认：8080     ）：" Ss_Single_Port
-	read -p "           认证密码（默认：hello    ）：" Ss_Password
-	read -p "     限制使用设备数（默认：不限制   ）：" Ss_Online_Limit
-	[[ -n $Ss_Online_Limit ]] && Ss_Online_Limit="${Ss_Online_Limit}#"
-	read -p "     用户限速值(K)：(默认：不限制   ）：" Ss_Speed_Limit
-	echo
-	Db_Config_Reader
-	Firewall_Setting
+Install_SSR() {
 	echo "--------------------- SSR安装 --------------------"
 	echo -ne "开始下载SSR..."
 	cd /usr/
@@ -327,34 +376,64 @@ Install_SSR(){
 	echo -e "\r$prompt_warning 已启动SSR并设置开机自启\n"
 }
 
-Open_BBR(){
+Install_V2ray() {
+	echo "-------------------- V2Ray安装 -------------------"
+	echo -n "开始安装V2ray..."
+	[[ `bash <(curl -L -s https://install.direct/go.sh) 1>/dev/null 2>/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
+
+	echo -n "开始获取V2ray配置文件..."
+	[[ `wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null` ]] && echo -e "${prompt_info} 获取V2ray配置文件成功"
+	echo -n "开始配置V2ray..."
+	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
+			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
+			-e "s/V2ray_Path/$V2ray_Path/g" \
+			-e "s/V2ray_Ssrpanel_Port/$V2ray_Ssrpanel_Port/g" \
+			-e "s/Node_Id/$Node_Id/g" \
+			-e "s/Db_Host/$Db_Host/g" \
+			-e "s/Db_Port/$Db_Port/g" \
+			-e "s/Db_Name/$Db_Name/g" \
+			-e "s/Db_User/$Db_User/g" \
+			-e "s/Db_Password/$Db_Password/g" config.json
+	[[ `mv -f onfig.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
+
+	[[ `systemctl restart v2ray 1>/dev/null 2>&1 && systemctl enable v2ray 1>/dev/null 2>&1` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ `echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1` ]]
+}
+
+#============ 菜单选项 ============
+
+
+Menu_Install_V2ray() {
+	Pre_Config
+	V2ray_Config_Reader
+	Db_Config_Reader
+	Firewall_Setting
+	Install_V2ray
+}
+
+Menu_Install_V2ray_Caddy() {
+	Pre_Config
+	V2ray_Config_Reader
+	Db_Config_Reader
+	Firewall_Setting
+	Install_Caddy
+	Install_V2ray
+}
+
+Menu_Install_SSR(){
+	Pre_Config
+	SSR_Config_Reader
+	Db_Config_Reader
+	Firewall_Setting
+	Install_SSR
+}
+
+Menu_Open_BBR(){
 	cd
-		wget -N --no-check-certificate "https://raw.githubusercontent.com/JadeVane/shell/master/others/bbr_tcp_mod.sh"
+	wget -N --no-check-certificate "https://raw.githubusercontent.com/JadeVane/shell/master/others/bbr_tcp_mod.sh"
 	bash bbr_tcp_mod.sh
 }
 
-#============ 主菜单 =============
-picking() {
-	read -s -n1 menu_picking
-	case "$menu_picking" in
-		1) clear
-		   Install_V2ray;;
-		2) clear
-		   Install_V2ray_Caddy;;
-		3) clear
-		   Install_SSR;;
-		4) clear
-		   Open_BBR;;
-		d) clear
-		   description;;
-		q) echo
-		   exit 0;;
-		*) echo -ne "\r   输入错误，请重新输入:"
-		   picking;;
-	esac
-}
-
-description() {
+Menu_Description() {
 	echo -e "                         ${yellow}===== 使用事项 =====${none}"
 	echo -e "1. BBR的安装目前仅在CentOS 7平台上进行测试，不保证在其他平台也能用"
 	echo -e "2. V2ray安装使用最安全的ws+tls+web的形式，会附带一篇英语美文作为伪装网站"
@@ -377,6 +456,27 @@ description() {
 		   exit 1;;
 		c) bash <(curl -L -s https://raw.githubusercontent.com/JadeVane/shell/master/shell/v2ray-ssr-deploy.sh);;
 		*) Menu;;
+	esac
+}
+
+#============ 主菜单 =============
+picking() {
+	read -s -n1 menu_picking
+	case "$menu_picking" in
+		1) clear
+		   Menu_Install_V2ray;;
+		2) clear
+		   Menu_Install_V2ray_Caddy;;
+		3) clear
+		   Menu_Install_SSR;;
+		4) clear
+		   Menu_Open_BBR;;
+		d) clear
+		   Menu_Description;;
+		q) echo
+		   exit 0;;
+		*) echo -ne "\r   输入错误，请重新输入:"
+		   picking;;
 	esac
 }
 
