@@ -129,7 +129,7 @@ Firewall_Setting(){
 				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp 2>&1 1>/dev/null
-				firewall-cmd --reload
+				firewall-cmd --reload 2>&1 1>/dev/null
 				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
 			fi
 			if [[ $Ss_Single_Port ]]; then
@@ -199,8 +199,6 @@ Firewall_Setting(){
 	echo -e "$prompt_info 防火墙规则配置完成\n"
 }
 
-
-#============ 菜单选项 ============
 Install_Caddy() {
 	echo -ne "----------------------- 警告 ---------------------\nCaddy可能与httpd冲突，如果系统中已安装httpd，则\n在安装caddy过程中会卸载httpd，请选择：\n------------------------------\n${green}y. ${none}继续安装Caddy\n${green}n. ${none}取消安装Caddy并返回主菜单\n\n${green}q. ${none}退出\n------------------------------\n是否继续？[y/n/q]："
 	Caddy_install_judgment
@@ -215,13 +213,15 @@ Install_Caddy() {
 	local caddy_dir="/tmp/caddy_install/"
 	local caddy_installer="/tmp/caddy_install/caddy.tar.gz"
 
-	echo -e "${prompt_info} 开始匹配安装包"
+	echo -ne "开始匹配安装包"
 	if [[ $sys_bit == "i386" || $sys_bit == "i686" ]]; then
 		local caddy_download_link="https://caddyserver.com/download/linux/386?license=personal"
+		echo -e "\r${prompt_info} 匹配安装包成功"
 	elif [[ $sys_bit == "x86_64" ]]; then
 		local caddy_download_link="https://caddyserver.com/download/linux/amd64?license=personal"
+		echo -e "\r${prompt_info} 匹配安装包成功"
 	else
-		echo -e "\r$prompt_error 自动安装Caddy失败！不是i386或x86_64系统" && exit 1
+		echo -e "\r$prompt_error 匹配Caddy失败！不是i386或x86_64系统" && exit 1
 	fi
 	echo -n "正在下载Caddy安装包..."
 	wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null
@@ -251,7 +251,7 @@ Install_Caddy() {
 
 	if [[ -f `which systemctl` ]]; then
 		cp -f ${caddy_dir}init/linux-systemd/caddy.service /lib/systemd/system/
-		[[ `systemctl enable caddy 2>&1 1>/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
+		[[ `systemctl enable caddy 2>&1 1>/dev/null` ]] && echo -e "\r${prompt_info} Caddy已设置开机自启"
 	else
 		cp -f ${caddy_dir}init/linux-sysvinit/caddy /etc/init.d/caddy
 		chmod +x /etc/init.d/caddy
@@ -285,6 +285,9 @@ Install_Caddy() {
 
 	systemctl restart caddy
 }
+
+#============ 菜单选项 ============
+
 
 Install_V2ray() {
 	Pre_Config
@@ -423,14 +426,12 @@ picking() {
 	read -s -n1 menu_picking
 	case "$menu_picking" in
 		1) clear
-		   Install_Caddy;;
-		2) clear
 		   Install_V2ray;;
-		3) clear
+		2) clear
 		   Install_V2ray_Caddy;;
-		4) clear
+		3) clear
 		   Install_SSR;;
-		5) clear
+		4) clear
 		   Open_BBR;;
 		d) clear
 		   description;;
@@ -453,12 +454,14 @@ description() {
 	echo -e "  https://github.com/JadeVane/shell/issues"
 	echo -e "  https://www.wenjinyu.me/board\n"
 	echo -e "                         ${yellow}======== End =======${none}"
-	echo -e "                         请选择操作："
 	echo -e "                           ${green}m.${none} 返回主菜单"
 	echo -e "                           ${green}q.${none} 退出"
+	echo -e "                           -------------"
+	echo -ne "                         请选择操作："
 	read -n1 des_picking
 	case $des_picking in
-		q) exit 1;;
+		q) echo
+		   exit 1;;
 		*) Menu;;
 	esac
 }
@@ -471,11 +474,10 @@ Menu(){
 	echo -e "     更新地址：https://www.wenjinyu.me${none}"
 	echo -e "==========================================="
 	echo -e "\n   ------------- 主菜单 ------------"
-	echo -e "   ${green}1.${none} 安装 Caddy"
-	echo -e "   ${green}2.${none} 安装 V2Ray（作为节点）"
-	echo -e "   ${green}3.${none} 安装 V2Ray+Caddy"
-	echo -e "   ${green}4.${none} 安装 SSR（作为节点）"
-	echo -e "   ${green}5.${none} 启用 BBR（仅CentOS）\n"
+	echo -e "   ${green}1.${none} 安装 V2Ray（作为节点）"
+	echo -e "   ${green}2.${none} 安装 V2Ray+Caddy"
+	echo -e "   ${green}3.${none} 安装 SSR（作为节点）"
+	echo -e "   ${green}4.${none} 启用 BBR（仅CentOS）\n"
 	echo -e "   ${green}d.${none} 说明（${yellow}首次使用先阅读${none}）\n"
 	echo -e "   ${green}q.${none} 退出"
 	echo -e "   ---------------------------------"
