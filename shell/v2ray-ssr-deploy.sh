@@ -215,22 +215,18 @@ Install_Caddy() {
 	local caddy_dir="/tmp/caddy_install/"
 	local caddy_installer="/tmp/caddy_install/caddy.tar.gz"
 
-	echo -e "${prompt_info} 正在安装Caddy，开始匹配安装包"
+	echo -e "${prompt_info} 开始匹配安装包"
 	if [[ $sys_bit == "i386" || $sys_bit == "i686" ]]; then
 		local caddy_download_link="https://caddyserver.com/download/linux/386?license=personal"
-		echo -ne "正在下载Caddy 32bit安装包..."
 	elif [[ $sys_bit == "x86_64" ]]; then
 		local caddy_download_link="https://caddyserver.com/download/linux/amd64?license=personal"
-		echo -ne "正在下载Caddy 64bit安装包..."
 	else
 		echo -e "\r$prompt_error 自动安装Caddy失败！不是i386或x86_64系统" && exit 1
 	fi
-
-	mkdir -p $caddy_dir
-
-	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成    "
+	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null` && echo -n "正在下载Caddy安装包..." ]] && echo -e "\r$prompt_info Caddy安装包下载完成"
 
 	echo -n "正在解压Caddy安装包..."
+	mkdir -p $caddy_dir
 	tar zxf $caddy_installer -C $caddy_dir 2>&1 1>/dev/null
 	if [ $? -eq 0 ]; then
 		echo -e "\r$prompt_info Caddy安装包解压完成"
