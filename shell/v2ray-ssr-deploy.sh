@@ -41,7 +41,6 @@ prompt_warning="${yellow}[Warning]${none}"
 prompt_error="${red}[Error]${none}"
 
 pre_config_status=0
-notification_level=" 1>/dev/null 2>/dev/null"
 
 [ $(id -u) != "0" ] && { echo -e "${prompt_error}错误: 请以root权限运行"; exit 1; }
 sys_bit=$(uname -m)
@@ -65,15 +64,15 @@ systemctl() {
 Pre_Config() {
 	if [[ pre_config_status -eq 0 ]]; then
 		echo "-------------- 预配置 ---------------"
-		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release $notification_level && echo -e "\r$prompt_info epel安装完成"
+		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release $ 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info epel安装完成"
 		echo -n "开始更新..."
-		$cmd update -y  $notification_level && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
+		$cmd update -y  $ 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
 		echo -n "开始安装必要组件..."
-		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto $notification_level && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]
+		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto $ 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]
 		echo -n "开始同步时间..."
-		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime $notification_level
-		ntpdate cn.pool.ntp.org  $notification_level
-		hwclock -w $notification_level
+		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime $ 1>/dev/null 2>/dev/null
+		ntpdate cn.pool.ntp.org  $ 1>/dev/null 2>/dev/null
+		hwclock -w $ 1>/dev/null 2>/dev/null
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
 		systemctl restart crond
@@ -117,38 +116,38 @@ Httpd_Remove_judgment(){
 
 Firewall_Setting(){
 	echo "------------------- 防火墙配置 -------------------"
-	if command -v firewall-cmd $notification_level; then
+	if command -v firewall-cmd $ 1>/dev/null 2>/dev/null; then
 		echo -e "${prompt_info} 已安装firewalld，开始进行防火墙配置"
-		systemctl status firewalld $notification_level
+		systemctl status firewalld $ 1>/dev/null 2>/dev/null
 		if [ $? -eq 0 ]; then
-			firewall-cmd --permanent --zone=public --remove-port=443/tcp $notification_level
-			firewall-cmd --permanent --zone=public --remove-port=80/tcp $notification_level
-			firewall-cmd --permanent --zone=public --add-port=443/tcp $notification_level
-			firewall-cmd --permanent --zone=public --add-port=80/tcp $notification_level
+			firewall-cmd --permanent --zone=public --remove-port=443/tcp $ 1>/dev/null 2>/dev/null
+			firewall-cmd --permanent --zone=public --remove-port=80/tcp $ 1>/dev/null 2>/dev/null
+			firewall-cmd --permanent --zone=public --add-port=443/tcp $ 1>/dev/null 2>/dev/null
+			firewall-cmd --permanent --zone=public --add-port=80/tcp $ 1>/dev/null 2>/dev/null
 			echo -e "$prompt_info 已放行端口：80, 443"
 			if [[ $V2ray_Port ]]; then
-				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp $notification_level
-				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp $notification_level
-				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp $notification_level
-				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp $notification_level
-				firewall-cmd --reload $notification_level
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --reload $ 1>/dev/null 2>/dev/null
 				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
 			fi
 			if [[ $Ss_Single_Port ]]; then
-				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp $notification_level
-				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp $notification_level
-				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp $notification_level
-				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp $notification_level
-				firewall-cmd --reload $notification_level
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp $ 1>/dev/null 2>/dev/null
+				firewall-cmd --reload $ 1>/dev/null 2>/dev/null
 				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
 			fi
 		else
 			echo -e "$prompt_warning firewalld似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
 		fi
 		echo -e "$prompt_info firewalld防火墙规则配置完成"
-	elif command -v iptables $notification_level; then
+	elif command -v iptables $ 1>/dev/null 2>/dev/null; then
 		echo -e "${prompt_info} 开始进行iptables防火墙配置"
-		/etc/init.d/iptables status $notification_level
+		/etc/init.d/iptables status $ 1>/dev/null 2>/dev/null
 		if [ $? -eq 0 ]; then
 			iptables -D INPUT -p tcp --dport 443 -j ACCEPT
 			iptables -D INPUT -p tcp --dport 80 -j ACCEPT
@@ -159,7 +158,7 @@ Firewall_Setting(){
 			ip6tables -A INPUT -p tcp --dport 443 -j ACCEPT
 			ip6tables -A INPUT -p tcp --dport 80 -j ACCEPT
 			[[ $? -ne 0 ]] && echo -e "$prompt_info 已放行端口：80, 443"
-			iptables -L -n | grep -i ${V2ray_Port} $notification_level
+			iptables -L -n | grep -i ${V2ray_Port} $ 1>/dev/null 2>/dev/null
 			if [ $? -ne 0 ]; then
 				iptables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
 				iptables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
@@ -230,7 +229,7 @@ Install_Caddy() {
 
 	echo -n "正在解压Caddy安装包..."
 	mkdir -p $caddy_dir
-	tar zxf $caddy_installer -C $caddy_dir $notification_level
+	tar zxf $caddy_installer -C $caddy_dir $ 1>/dev/null 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo -e "\r$prompt_info Caddy安装包解压完成"
 	else
@@ -248,17 +247,17 @@ Install_Caddy() {
 
 	if [[ -f `which systemctl` ]]; then
 		cp -f ${caddy_dir}init/linux-systemd/caddy.service /lib/systemd/system/
-		[[ `systemctl enable caddy $notification_level` ]] && echo -e "\r${prompt_info} Caddy已设置开机自启"
+		[[ `systemctl enable caddy $ 1>/dev/null 2>/dev/null` ]] && echo -e "\r${prompt_info} Caddy已设置开机自启"
 	else
 		cp -f ${caddy_dir}init/linux-sysvinit/caddy /etc/init.d/caddy
 		chmod +x /etc/init.d/caddy
-		[[ `update-rc.d -f caddy defaults $notification_level` ]] && echo -e "\r${prompt_info} Caddy已设置开机自启"
+		[[ `update-rc.d -f caddy defaults $ 1>/dev/null 2>/dev/null` ]] && echo -e "\r${prompt_info} Caddy已设置开机自启"
 	fi
 
 	mkdir -p /etc/ssl/caddy
 
 	if [ -z "$(grep www-data /etc/passwd)" ]; then
-		useradd -M -s /usr/sbin/nologin www-data $notification_level
+		useradd -M -s /usr/sbin/nologin www-data $ 1>/dev/null 2>/dev/null
 	fi
 	chown -R www-data.www-data /etc/ssl/caddy
 	rm -rf $caddy_dir
@@ -293,7 +292,7 @@ Install_V2ray() {
 	Firewall_Setting
 	echo "-------------------- V2Ray安装 -------------------"
 	echo -n "开始安装V2ray..."
-	[[ `bash <(curl -L -s https://install.direct/go.sh) $notification_level` ]] && echo -e "\r${prompt_info} V2ray安装完成"
+	[[ `bash <(curl -L -s https://install.direct/go.sh) $ 1>/dev/null 2>/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
 
 	echo -n "开始获取V2ray配置文件..."
 	[[ `wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null` ]] && echo -e "${prompt_info} 获取V2ray配置文件成功"
@@ -310,7 +309,7 @@ Install_V2ray() {
 			-e "s/Db_Password/$Db_Password/g" config.json
 	[[ `mv -f onfig.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
 
-	[[ `systemctl restart v2ray $notification_levell && systemctl enable v2ray $notification_levell` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ `echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1` ]]
+	[[ `systemctl restart v2ray 1>/dev/null 2>&1 && systemctl enable v2ray 1>/dev/null 2>&1` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ `echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1` ]]
 }
 
 Install_V2ray_Caddy() {
@@ -378,13 +377,13 @@ Install_SSR(){
 	echo -ne "开始下载SSR..."
 	cd /usr/
 	rm -rf /usr/shadowsocksr
-	[[ `git clone -b master https://github.com/JadeVane/shadowsocksr.git $notification_level` ]] && echo -e "\r$prompt_warning 下载SSR成功   " || echo -e "\r$prompt_error 下载SSR失败   " && exit 1
+	[[ `git clone -b master https://github.com/JadeVane/shadowsocksr.git $ 1>/dev/null 2>/dev/null` ]] && echo -e "\r$prompt_warning 下载SSR成功   " || echo -e "\r$prompt_error 下载SSR失败   " && exit 1
 
 	cd shadowsocksr
 	echo -n "开始安装依赖..."
-	bash setup_cymysql.sh $notification_level
+	bash setup_cymysql.sh $ 1>/dev/null 2>/dev/null
 	echo -ne "\r初始化配置...      "
-	bash initcfg.sh  $notification_level
+	bash initcfg.sh  $ 1>/dev/null 2>/dev/null
 	echo -e '\r$prompt_info SSR安装完成'
 
 	echo -n "正在写入配置文件..."
@@ -406,9 +405,9 @@ Install_SSR(){
 			-e "s/Ss_Speed_Limit/$Ss_Speed_Limit/g" user-config.json
 
 	echo -ne "\r正在启动SSR...        "
-	wget -N --no-check-certificate -P /etc/systemd/system/shadowsocksr.service https://raw.githubusercontent.com/JadeVane/shell/master/resource/shadowsocksr.service  $notification_level
+	wget -N --no-check-certificate -P /etc/systemd/system/shadowsocksr.service https://raw.githubusercontent.com/JadeVane/shell/master/resource/shadowsocksr.service  $ 1>/dev/null 2>/dev/null
 	systemctl start shadowsocksr
-	systemctl enable shadowsocksr $notification_level
+	systemctl enable shadowsocksr $ 1>/dev/null 2>/dev/null
 	echo -e "\r$prompt_warning 已启动SSR并设置开机自启\n"
 }
 
