@@ -64,15 +64,15 @@ systemctl() {
 Pre_Config() {
 	if [[ pre_config_status -eq 0 ]]; then
 		echo "-------------- 预配置 ---------------"
-		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release >/dev/null 2>&1 && echo -e "\r$prompt_info epel安装完成"
+		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release 2>&1 1>/dev/null && echo -e "\r$prompt_info epel安装完成"
 		echo -n "开始更新..."
-		$cmd update -y >/dev/null 2>&1 && echo -e "\r$prompt_info 更新完成" || echo -e "\r$prompt_error 更新失败" && exit 1
+		$cmd update -y  2>&1 1>/dev/null && echo -e "\r$prompt_info 更新完成" || echo -e "\r$prompt_error 更新失败" && exit 1
 		echo -n "开始安装必要组件..."
-		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto >/dev/null 2>&1 && echo -e "\r$prompt_info 必要组件安装完成 " || echo -e "\r$prompt_error 必要组件安装失败" && exit 1
+		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 2>&1 1>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || echo -e "\r$prompt_error 必要组件安装失败" && exit 1
 		echo -n "开始同步时间..."
-		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-		ntpdate cn.pool.ntp.org >/dev/null
-		hwclock -w
+		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 2>&1 1>/dev/null
+		ntpdate cn.pool.ntp.org  2>&1 1>/dev/null
+		hwclock -w 2>&1 1>/dev/null
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
 		systemctl restart crond
@@ -105,7 +105,7 @@ V2ray_Config_Reader() {
 Caddy_install_judgment(){
     read -n1 yn
     case $yn in
-        y) ;;
+        y) echo;;
         n) Menu;;
         *) echo -ne "\r输入错误，请重新输入："
            Caddy_install_judgment;;
@@ -115,33 +115,38 @@ Caddy_install_judgment(){
 
 Firewall_Setting(){
 	echo "------------------- 防火墙配置 -------------------"
-	if command -v firewall-cmd >/dev/null 2>&1; then
-		systemctl status firewalld > /dev/null 2>&1
+	if command -v firewall-cmd 2>&1 1>/dev/null; then
+		echo -e "${prompt_info} 开始进行firewalld防火墙配置"
+		systemctl status firewalld 2>&1 1>/dev/null
 		if [ $? -eq 0 ]; then
-			firewall-cmd --permanent --zone=public --remove-port=443/tcp
-			firewall-cmd --permanent --zone=public --remove-port=80/tcp
-			firewall-cmd --permanent --zone=public --add-port=443/tcp
-			firewall-cmd --permanent --zone=public --add-port=80/tcp
+			firewall-cmd --permanent --zone=public --remove-port=443/tcp 2>&1 1>/dev/null
+			firewall-cmd --permanent --zone=public --remove-port=80/tcp 2>&1 1>/dev/null
+			firewall-cmd --permanent --zone=public --add-port=443/tcp 2>&1 1>/dev/null
+			firewall-cmd --permanent --zone=public --add-port=80/tcp 2>&1 1>/dev/null
+			echo -e "$prompt_info 已放行端口：80, 443"
 			if [[ $V2ray_Port ]]; then
-				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp
-				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp
-				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp
-				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp 2>&1 1>/dev/null
 				firewall-cmd --reload
+				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
 			fi
 			if [[ $Ss_Single_Port ]]; then
-				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp
-				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp
-				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp
-				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp 2>&1 1>/dev/null
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp 2>&1 1>/dev/null
 				firewall-cmd --reload
+				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
 			fi
 		else
 			echo -e "$prompt_warning firewalld似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
 		fi
 		echo -e "$prompt_info firewalld防火墙规则配置完成"
-	elif command -v iptables >/dev/null 2>&1; then
-		/etc/init.d/iptables status > /dev/null 2>&1
+	elif command -v iptables 2>&1 1>/dev/null; then
+		echo -e "${prompt_info} 开始进行iptables防火墙配置"
+		/etc/init.d/iptables status 2>&1 1>/dev/null
 		if [ $? -eq 0 ]; then
 			iptables -D INPUT -p tcp --dport 443 -j ACCEPT
 			iptables -D INPUT -p tcp --dport 80 -j ACCEPT
@@ -152,7 +157,7 @@ Firewall_Setting(){
 			ip6tables -A INPUT -p tcp --dport 443 -j ACCEPT
 			ip6tables -A INPUT -p tcp --dport 80 -j ACCEPT
 			[[ $? -ne 0 ]] && echo -e "$prompt_info 已放行端口：80, 443"
-			iptables -L -n | grep -i ${V2ray_Port} > /dev/null 2>&1
+			iptables -L -n | grep -i ${V2ray_Port} 2>&1 1>/dev/null
 			if [ $? -ne 0 ]; then
 				iptables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
 				iptables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
@@ -202,9 +207,9 @@ Install_Caddy() {
 
 	echo "-------------------- 安装Caddy -------------------"
 	if [[ $cmd == "yum" ]]; then
-		[[ $(pgrep "httpd") ]] && echo -n "检测到已安装httpd，正在卸载httpd..." && systemctl stop httpd && yum remove httpd -y >/dev/null 2>&1 && echo -e "\r$prompt_warning httpd卸载完成                      "
+		[[ $(pgrep "httpd") ]] && echo -n "检测到已安装httpd，正在卸载httpd..." && systemctl stop httpd && yum remove httpd -y 1>/dev/null 2>&1 && echo -e "\r$prompt_warning httpd卸载完成                      "
 	else
-		[[ $(pgrep "apache2") ]] && echo -n "检测到已安装apache2，正在卸载apache2..." && service apache2 stop && apt remove apache2* -y >/dev/null 2>&1 && echo -e "\r$prompt_warning httpd卸载完成                          "
+		[[ $(pgrep "apache2") ]] && echo -n "检测到已安装apache2，正在卸载apache2..." && service apache2 stop && apt remove apache2* -y 1>/dev/null 2>&1 && echo -e "\r$prompt_warning httpd卸载完成                          "
 	fi
 
 	local caddy_dir="/tmp/caddy_install/"
@@ -224,10 +229,10 @@ Install_Caddy() {
 	mkdir -p $caddy_dir
 
 	echo -n "开始下载Caddy安装包..."
-	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link >/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成"
+	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>&1 1>/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成"
 
 	echo -n "正在解压Caddy安装包..."
-	tar zxf $caddy_installer -C $caddy_dir >/dev/null
+	tar zxf $caddy_installer -C $caddy_dir 2>&1 1>/dev/null
 	if [ $? -eq 0 ]; then
 		echo -e "\r$prompt_info Caddy安装包解压完成"
 	else
@@ -245,29 +250,29 @@ Install_Caddy() {
 
 	if [[ -f `which systemctl` ]]; then
 		cp -f ${caddy_dir}init/linux-systemd/caddy.service /lib/systemd/system/
-		[[ `systemctl enable caddy >/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
+		[[ `systemctl enable caddy 2>&1 1>/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
 	else
 		cp -f ${caddy_dir}init/linux-sysvinit/caddy /etc/init.d/caddy
 		chmod +x /etc/init.d/caddy
-		[[ `update-rc.d -f caddy defaults >/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
+		[[ `update-rc.d -f caddy defaults 2>&1 1>/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
 	fi
 
 	mkdir -p /etc/ssl/caddy
 
 	if [ -z "$(grep www-data /etc/passwd)" ]; then
-		useradd -M -s /usr/sbin/nologin www-data
+		useradd -M -s /usr/sbin/nologin www-data 2>&1 1>/dev/null
 	fi
 	chown -R www-data.www-data /etc/ssl/caddy
 	rm -rf $caddy_dir
 	echo -e "\r$prompt_warning Caddy安装完成       "
 
 	echo -n "正在创建一个简单的伪装网站..."
-	wget --no-check-certificate -O index.html https://raw.githubusercontent.com/JadeVane/shell/master/web/index.html >/dev/null
+	wget --no-check-certificate -O index.html https://raw.githubusercontent.com/JadeVane/shell/master/web/index.html  2>&1 1>/dev/null
 	mkdir -p /var/www/v2ray/
 	mv index.html /var/www/v2ray/
 	# 修改配置
 	mkdir -p /etc/caddy/
-	wget --no-check-certificate -O Caddyfile https://raw.githubusercontent.com/JadeVane/shell/master/resource/Caddyfile >/dev/null
+	wget --no-check-certificate -O Caddyfile https://raw.githubusercontent.com/JadeVane/shell/master/resource/Caddyfile 2>&1 1>/dev/null
 	local User_Name=$(((RANDOM << 22)))
 	sed -i  -e "s/User_Name/$User_Name/" \
 			-e "s/V2ray_Domain/$V2ray_Domain/" \
@@ -286,10 +291,10 @@ Install_V2ray() {
 	Firewall_Setting
 	echo "-------------------- V2Ray安装 -------------------"
 	echo -n "开始安装V2ray..."
-	[[ `bash <(curl -L -s https://install.direct/go.sh) >/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
+	[[ `bash <(curl -L -s https://install.direct/go.sh) 2>&1 1>/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
 
 	echo -n "开始配置V2ray..."
-	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json >/dev/null
+	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>&1 1>/dev/null
 	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
 			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
 			-e "s/V2ray_Path/$V2ray_Path/g" \
@@ -302,7 +307,7 @@ Install_V2ray() {
 			-e "s/Db_Password/$Db_Password/g" config.json
 	[[ `mv -f config.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
 	systemctl restart v2ray
-	systemctl enable v2ray
+	systemctl enable v2ray 2>&1 1>/dev/null
 	echo "${prompt_info} 已启动V2ray并设置开机自启\n"
 }
 
@@ -371,13 +376,13 @@ Install_SSR(){
 	echo -ne "开始下载SSR..."
 	cd /usr/
 	rm -rf /usr/shadowsocksr
-	[[ `git clone -b master https://github.com/JadeVane/shadowsocksr.git >/dev/null 2>&1` ]] && echo -e "\r$prompt_warning 下载SSR成功   " || echo -e "\r$prompt_error 下载SSR失败   " && exit 1
+	[[ `git clone -b master https://github.com/JadeVane/shadowsocksr.git 2>&1 1>/dev/null` ]] && echo -e "\r$prompt_warning 下载SSR成功   " || echo -e "\r$prompt_error 下载SSR失败   " && exit 1
 
 	cd shadowsocksr
 	echo -n "开始安装依赖..."
-	bash setup_cymysql.sh >/dev/null
+	bash setup_cymysql.sh 2>&1 1>/dev/null
 	echo -ne "\r初始化配置...      "
-	bash initcfg.sh >/dev/null
+	bash initcfg.sh  2>&1 1>/dev/null
 	echo -e '\r$prompt_info SSR安装完成'
 
 	echo -n "正在写入配置文件..."
@@ -399,9 +404,9 @@ Install_SSR(){
 			-e "s/Ss_Speed_Limit/$Ss_Speed_Limit/g" user-config.json
 
 	echo -ne "\r正在启动SSR...        "
-	wget -N --no-check-certificate -P /etc/systemd/system/shadowsocksr.service https://raw.githubusercontent.com/JadeVane/shell/master/resource/shadowsocksr.service >/dev/null 2>&1
+	wget -N --no-check-certificate -P /etc/systemd/system/shadowsocksr.service https://raw.githubusercontent.com/JadeVane/shell/master/resource/shadowsocksr.service  2>&1 1>/dev/null
 	systemctl start shadowsocksr
-	systemctl enable shadowsocksr
+	systemctl enable shadowsocksr 2>&1 1>/dev/null
 	echo -e "\r$prompt_warning 已启动SSR并设置开机自启\n"
 }
 
