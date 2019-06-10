@@ -113,6 +113,89 @@ Caddy_install_judgment(){
     echo
 }
 
+Firewall_Setting(){
+	echo "------------------- 防火墙配置 -------------------"
+	if command -v firewall-cmd >/dev/null 2>&1; then
+		systemctl status firewalld > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			firewall-cmd --permanent --zone=public --remove-port=443/tcp
+			firewall-cmd --permanent --zone=public --remove-port=80/tcp
+			firewall-cmd --permanent --zone=public --add-port=443/tcp
+			firewall-cmd --permanent --zone=public --add-port=80/tcp
+			if [[ $V2ray_Port ]]; then
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp
+				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp
+				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp
+				firewall-cmd --reload
+			fi
+			if [[ $Ss_Single_Port ]]; then
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp
+				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp
+				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp
+				firewall-cmd --reload
+			fi
+		else
+			echo -e "$prompt_warning firewalld似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
+		fi
+		echo -e "$prompt_info firewalld防火墙规则配置完成"
+	elif command -v iptables >/dev/null 2>&1; then
+		/etc/init.d/iptables status > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			iptables -D INPUT -p tcp --dport 443 -j ACCEPT
+			iptables -D INPUT -p tcp --dport 80 -j ACCEPT
+			iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+			iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+			ip6tables -D INPUT -p tcp --dport 443 -j ACCEPT
+			ip6tables -D INPUT -p tcp --dport 80 -j ACCEPT
+			ip6tables -A INPUT -p tcp --dport 443 -j ACCEPT
+			ip6tables -A INPUT -p tcp --dport 80 -j ACCEPT
+			[[ $? -ne 0 ]] && echo -e "$prompt_info 已放行端口：80, 443"
+			iptables -L -n | grep -i ${V2ray_Port} > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				iptables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				iptables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				iptables -D INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				iptables -A INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -D INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				ip6tables -A INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
+				/etc/init.d/iptables save
+				/etc/init.d/iptables restart
+				/etc/init.d/ip6tables save
+				/etc/init.d/ip6tables restart
+			else
+				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
+			fi
+			iptables -L -n | grep -i ${Ss_Single_Port} > /dev/null 2>&1
+			if [ $? -ne 0 ]; then
+				iptables -D INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				iptables -A INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				iptables -D INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				iptables -A INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -D INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -A INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -D INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				ip6tables -A INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
+				/etc/init.d/iptables save
+				/etc/init.d/iptables restart
+				/etc/init.d/ip6tables save
+				/etc/init.d/ip6tables restart
+			else
+				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
+			fi
+		else
+			echo -e "$prompt_warning iptables似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
+		fi
+		echo -e "$prompt_info iptables防火墙规则配置完成"
+	fi
+	echo -e "$prompt_info 防火墙规则配置完成\n"
+}
+
+
+#============ 菜单选项 ============
 Install_Caddy() {
 	echo -ne "----------------------- 警告 ---------------------\nCaddy可能与httpd冲突，如果系统中已安装httpd，则在安装caddy过程中会卸载httpd，请选择：\n------------------------------\n${green}y. ${none}继续安装Caddy\n${green}n. ${none}取消安装Caddy并返回主菜单\n\n${green}q. ${none}退出\n------------------------------\n是否继续？[y/n/q]："
 	read -n1 yn
@@ -196,87 +279,44 @@ Install_Caddy() {
 			-e "s/V2ray_Path/$V2ray_Path/" \
 			-e "s/V2ray_Port/$V2ray_Port/" Caddyfile
 	mv -f Caddyfile /etc/caddy/
-	systemctl restart caddy
 	echo -e "\r$prompt_warning 创建伪装网站完成，伪装网址：$V2ray_Domain\n"
+	Firewall_Setting
+	systemctl restart caddy
 }
 
-Firewall_Setting(){
-	echo "------------------- 防火墙配置 -------------------"
-	if command -v firewall-cmd >/dev/null 2>&1; then
-		systemctl status firewalld > /dev/null 2>&1
-		if [ $? -eq 0 ]; then
-			firewall-cmd --permanent --zone=public --remove-port=443/tcp
-			firewall-cmd --permanent --zone=public --remove-port=80/tcp
-			firewall-cmd --permanent --zone=public --add-port=443/tcp
-			firewall-cmd --permanent --zone=public --add-port=80/tcp
-			if [[ $V2ray_Port ]]; then
-				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp
-				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp
-				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp
-				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp
-				firewall-cmd --reload
-			fi
-			if [[ $Ss_Single_Port ]]; then
-				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/tcp
-				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp
-				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp
-				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp
-				firewall-cmd --reload
-			fi
-		else
-			echo -e "$prompt_warning firewalld似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
-		fi
-	elif command -v iptables >/dev/null 2>&1; then
-		/etc/init.d/iptables status > /dev/null 2>&1
-		if [ $? -eq 0 ]; then
-			iptables -D INPUT -p tcp --dport 443 -j ACCEPT
-			iptables -D INPUT -p tcp --dport 80 -j ACCEPT
-			iptables -A INPUT -p tcp --dport 443 -j ACCEPT
-			iptables -A INPUT -p tcp --dport 80 -j ACCEPT
-			ip6tables -D INPUT -p tcp --dport 443 -j ACCEPT
-			ip6tables -D INPUT -p tcp --dport 80 -j ACCEPT
-			ip6tables -A INPUT -p tcp --dport 443 -j ACCEPT
-			ip6tables -A INPUT -p tcp --dport 80 -j ACCEPT
-			[[ $? -ne 0 ]] && echo -e "$prompt_info 已放行端口：80, 443"
-			iptables -L -n | grep -i ${V2ray_Port} > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				iptables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
-				iptables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
-				iptables -D INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
-				iptables -A INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
-				ip6tables -D INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
-				ip6tables -A INPUT -p tcp --dport ${V2ray_Port} -j ACCEPT
-				ip6tables -D INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
-				ip6tables -A INPUT -p udp --dport ${V2ray_Port} -j ACCEPT
-				/etc/init.d/iptables save
-				/etc/init.d/iptables restart
-				/etc/init.d/ip6tables save
-				/etc/init.d/ip6tables restart
-			else
-				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
-			fi
-			iptables -L -n | grep -i ${Ss_Single_Port} > /dev/null 2>&1
-			if [ $? -ne 0 ]; then
-				iptables -D INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
-				iptables -A INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
-				iptables -D INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
-				iptables -A INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
-				ip6tables -D INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
-				ip6tables -A INPUT -p tcp --dport ${Ss_Single_Port} -j ACCEPT
-				ip6tables -D INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
-				ip6tables -A INPUT -p udp --dport ${Ss_Single_Port} -j ACCEPT
-				/etc/init.d/iptables save
-				/etc/init.d/iptables restart
-				/etc/init.d/ip6tables save
-				/etc/init.d/ip6tables restart
-			else
-				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
-			fi
-		else
-			echo -e "$prompt_warning iptables似乎未安装，或已安装但未启动，如有必要，请手动设置防火墙规则"
-		fi
-	fi
-	echo -e "$prompt_info 防火墙规则配置完成\n"
+Install_V2ray() {
+	Pre_Config
+	V2ray_Config_Reader
+	Db_Config_Reader
+	Firewall_Setting
+	echo "-------------------- V2Ray安装 -------------------"
+	echo -n "开始安装V2ray..."
+	[[ `bash <(curl -L -s https://install.direct/go.sh) >/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
+
+	echo -n "开始配置V2ray..."
+	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json >/dev/null
+	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
+			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
+			-e "s/V2ray_Path/$V2ray_Path/g" \
+			-e "s/V2ray_Ssrpanel_Port/$V2ray_Ssrpanel_Port/g" \
+			-e "s/Node_Id/$Node_Id/g" \
+			-e "s/Db_Host/$Db_Host/g" \
+			-e "s/Db_Port/$Db_Port/g" \
+			-e "s/Db_Name/$Db_Name/g" \
+			-e "s/Db_User/$Db_User/g" \
+			-e "s/Db_Password/$Db_Password/g" config.json
+	[[ `mv -f config.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
+	systemctl restart v2ray
+	systemctl enable v2ray
+	echo "${prompt_info} 已启动V2ray并设置开机自启\n"
+}
+
+Install_V2ray_Caddy() {
+	V2ray_Config_Reader
+	Db_Config_Reader
+	Firewall_Setting
+	Install_Caddy
+	Install_V2ray
 }
 
 Install_SSR(){
@@ -370,63 +410,28 @@ Install_SSR(){
 	echo -e "\r$prompt_warning 已启动SSR并设置开机自启\n"
 }
 
-
-#============ 主程序 =============
-Install_V2ray_Caddy() {
-	V2ray_Config_Reader
-	Db_Config_Reader
-	Firewall_Setting
-	Install_Caddy
-	Install_V2ray
-}
-
-Install_V2ray() {
-	Pre_Config
-	V2ray_Config_Reader
-	Db_Config_Reader
-	Firewall_Setting
-	echo "-------------------- V2Ray安装 -------------------"
-	echo -n "开始安装V2ray..."
-	[[ `bash <(curl -L -s https://install.direct/go.sh) >/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
-
-	echo -n "开始配置V2ray..."
-	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json >/dev/null
-	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
-			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
-			-e "s/V2ray_Path/$V2ray_Path/g" \
-			-e "s/V2ray_Ssrpanel_Port/$V2ray_Ssrpanel_Port/g" \
-			-e "s/Node_Id/$Node_Id/g" \
-			-e "s/Db_Host/$Db_Host/g" \
-			-e "s/Db_Port/$Db_Port/g" \
-			-e "s/Db_Name/$Db_Name/g" \
-			-e "s/Db_User/$Db_User/g" \
-			-e "s/Db_Password/$Db_Password/g" config.json
-	[[ `mv -f config.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
-	systemctl restart v2ray
-	systemctl enable v2ray
-	echo "${prompt_info} 已启动V2ray并设置开机自启\n"
-}
-
-Install_Caddy() {
-	Firewall_Setting
-	Install_Caddy
-}
-
 Open_BBR(){
 	cd
 		wget -N --no-check-certificate "https://raw.githubusercontent.com/JadeVane/shell/master/others/bbr_tcp_mod.sh"
 	bash bbr_tcp_mod.sh
 }
 
+#============ 主菜单 =============
 picking() {
 	read -s -n1 menu_picking
 	case "$menu_picking" in
-		1) Install_Caddy;;
-		2) Install_V2ray;;
-		3) Install_V2ray_Caddy;;
-		4) Install_SSR;;
-		5) Open_BBR;;
-		n) description;;
+		1) clear
+		   Install_Caddy;;
+		2) clear
+		   Install_V2ray;;
+		3) clear
+		   Install_V2ray_Caddy;;
+		4) clear
+		   Install_SSR;;
+		5) clear
+		   Open_BBR;;
+		d) clear
+		   description;;
 		q) echo
 		   exit 0;;
 		*) echo -ne "\r   输入错误，请重新输入:"
