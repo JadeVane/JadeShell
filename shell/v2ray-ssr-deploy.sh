@@ -66,9 +66,9 @@ Pre_Config() {
 		echo "-------------- 预配置 ---------------"
 		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release 2>&1 1>/dev/null && echo -e "\r$prompt_info epel安装完成"
 		echo -n "开始更新..."
-		$cmd update -y  2>&1 1>/dev/null && echo -e "\r$prompt_info 更新完成" || echo -e "\r$prompt_error 更新失败" && exit 1
+		$cmd update -y  2>&1 1>/dev/null && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
 		echo -n "开始安装必要组件..."
-		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 2>&1 1>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || echo -e "\r$prompt_error 必要组件安装失败" && exit 1
+		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 2>&1 1>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]
 		echo -n "开始同步时间..."
 		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 2>&1 1>/dev/null
 		ntpdate cn.pool.ntp.org  2>&1 1>/dev/null
@@ -108,6 +108,7 @@ Httpd_Remove_judgment(){
     case $yn in
         y) echo -n "正在卸载httpd/apache2..."
 		   systemctl stop httpd && yum remove httpd -y 1>/dev/null 2>&1 && echo -e "\r$prompt_warning httpd/apache2卸载完成";;
+		q) exit 1;;
         *) Menu;;
     esac
     echo
@@ -450,14 +451,16 @@ description() {
 	echo -e "  https://github.com/JadeVane/shell/issues"
 	echo -e "  https://www.wenjinyu.me/board\n"
 	echo -e "                         ${yellow}======== End =======${none}"
+	echo -e "                           ${green}c.${none} 更新脚本"
 	echo -e "                           ${green}m.${none} 返回主菜单"
 	echo -e "                           ${green}q.${none} 退出"
 	echo -e "                           -------------"
-	echo -ne "                         请选择操作："
+	echo -ne "                           请选择操作："
 	read -n1 des_picking
 	case $des_picking in
 		q) echo
 		   exit 1;;
+		c) bash <(curl -L -s https://raw.githubusercontent.com/JadeVane/shell/master/shell/v2ray-ssr-deploy.sh);;
 		*) Menu;;
 	esac
 }
