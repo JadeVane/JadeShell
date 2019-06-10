@@ -198,7 +198,6 @@ Firewall_Setting(){
 #============ 菜单选项 ============
 Install_Caddy() {
 	echo -ne "----------------------- 警告 ---------------------\nCaddy可能与httpd冲突，如果系统中已安装httpd，则在安装caddy过程中会卸载httpd，请选择：\n------------------------------\n${green}y. ${none}继续安装Caddy\n${green}n. ${none}取消安装Caddy并返回主菜单\n\n${green}q. ${none}退出\n------------------------------\n是否继续？[y/n/q]："
-	read -n1 yn
 	Caddy_install_judgment
 
 	echo "-------------------- 安装Caddy -------------------"
@@ -214,10 +213,10 @@ Install_Caddy() {
 	echo -n "正在安装Caddy，开始检测安装环境..."
 	if [[ $sys_bit == "i386" || $sys_bit == "i686" ]]; then
 		local caddy_download_link="https://caddyserver.com/download/linux/386?license=personal"
-		echo -e "\r$prompt_warning 正在下载Caddy 32bit安装包...      \b\b\b\b\b\b"
+		echo -e "\r 正在下载Caddy 32bit安装包...      \b\b\b\b\b\b"
 	elif [[ $sys_bit == "x86_64" ]]; then
 		local caddy_download_link="https://caddyserver.com/download/linux/amd64?license=personal"
-		echo -e "\r$prompt_warning 正在下载Caddy 64bit安装包...      \b\b\b\b\b\b"
+		echo -e "\r 正在下载Caddy 64bit安装包...      \b\b\b\b\b\b"
 	else
 		echo -e "\r$prompt_error 自动安装Caddy失败！不是i386或x86_64系统" && exit 1
 	fi
@@ -225,21 +224,17 @@ Install_Caddy() {
 	mkdir -p $caddy_dir
 
 	echo -n "开始下载Caddy安装包..."
-	if ! wget --no-check-certificate -O "$caddy_installer" $caddy_download_link; then
-		echo -e "\r$prompt_error 下载Caddy失败！$none" && exit 1
-	else
-		echo -e "\r$prompt_warning Caddy安装包下载完成"
-	fi
+	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link >/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成" || echo -e "\r$prompt_error 下载Caddy失败！$none" && exit 1
 
 	echo -n "正在解压Caddy安装包..."
-	tar zxf $caddy_installer -C $caddy_dir
+	tar zxf $caddy_installer -C $caddy_dir >/dev/null
 	if [ $? -eq 0 ]; then
-		echo -e "\r$prompt_warning Caddy安装包解压完成"
+		echo -e "\r$prompt_info Caddy安装包解压完成"
 	else
-		echo -e "\r$prompt_warning Caddy安装包解压失败"
+		echo -e "\r$prompt_error Caddy安装包解压失败"
 	fi
 
-	echo -ne "\r正在安装Caddy...      \b\b\b\b\b\b"
+	echo -ne "正在安装Caddy...      \b\b\b\b\b\b"
 	cp -f ${caddy_dir}caddy /usr/local/bin/
 
 	if [[ ! -f /usr/local/bin/caddy ]]; then
@@ -250,11 +245,11 @@ Install_Caddy() {
 
 	if [[ -f `which systemctl` ]]; then
 		cp -f ${caddy_dir}init/linux-systemd/caddy.service /lib/systemd/system/
-		systemctl enable caddy
+		[[ systemctl enable caddy >/dev/null ]] && echo -e "${prompt_info} Caddy已设置开机自启"
 	else
 		cp -f ${caddy_dir}init/linux-sysvinit/caddy /etc/init.d/caddy
 		chmod +x /etc/init.d/caddy
-		update-rc.d -f caddy defaults
+		[[ update-rc.d -f caddy defaults >/dev/null ]] && echo -e "${prompt_info} Caddy已设置开机自启"
 	fi
 
 	mkdir -p /etc/ssl/caddy
@@ -267,12 +262,12 @@ Install_Caddy() {
 	echo -e "\r$prompt_warning Caddy安装完成       "
 
 	echo -n "正在创建一个简单的伪装网站..."
-	wget --no-check-certificate -O index.html https://raw.githubusercontent.com/JadeVane/shell/master/web/index.html
+	wget --no-check-certificate -O index.html https://raw.githubusercontent.com/JadeVane/shell/master/web/index.html >/dev/null
 	mkdir -p /var/www/v2ray/
 	mv index.html /var/www/v2ray/
 	# 修改配置
 	mkdir -p /etc/caddy/
-	wget --no-check-certificate -O Caddyfile https://raw.githubusercontent.com/JadeVane/shell/master/resource/Caddyfile
+	wget --no-check-certificate -O Caddyfile https://raw.githubusercontent.com/JadeVane/shell/master/resource/Caddyfile >/dev/null
 	local User_Name=$(((RANDOM << 22)))
 	sed -i  -e "s/User_Name/$User_Name/" \
 			-e "s/V2ray_Domain/$V2ray_Domain/" \
