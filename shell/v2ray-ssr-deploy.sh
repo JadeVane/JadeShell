@@ -202,7 +202,6 @@ Firewall_Setting(){
 }
 
 Install_Caddy() {
-
 	echo "-------------------- 安装Caddy -------------------"
 	if [[ $cmd == "yum" ]]; then
 		[[ $(pgrep "httpd") || $(pgrep "apache2") ]] && Httpd_Remove_judgment
@@ -311,7 +310,7 @@ Install_V2ray() {
 			-e "s/Db_Password/$Db_Password/g" config.json
 	[[ `mv -f onfig.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
 
-	[[ `systemctl restart v2ray $notification_levell && systemctl enable v2ray $notification_levell` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1 ]]
+	[[ `systemctl restart v2ray $notification_levell && systemctl enable v2ray $notification_levell` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ `echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1` ]]
 }
 
 Install_V2ray_Caddy() {
