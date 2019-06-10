@@ -224,7 +224,7 @@ Install_Caddy() {
 	mkdir -p $caddy_dir
 
 	echo -n "开始下载Caddy安装包..."
-	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link >/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成" || echo -e "\r$prompt_error 下载Caddy失败！$none" && exit 1
+	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link >/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成"
 
 	echo -n "正在解压Caddy安装包..."
 	tar zxf $caddy_installer -C $caddy_dir >/dev/null
