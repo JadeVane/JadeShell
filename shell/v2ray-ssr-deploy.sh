@@ -38,7 +38,7 @@ Ss_Speed_Limit="0"
 # 提示信息
 prompt_info="${green}[Info]${none}"
 prompt_warning="${yellow}[Warning]${none}"
-prompt_error="${red} [Error]${none}"
+prompt_error="${red}[Error]${none}"
 
 pre_config_status=0
 
@@ -224,7 +224,12 @@ Install_Caddy() {
 		echo -e "\r$prompt_error 自动安装Caddy失败！不是i386或x86_64系统" && exit 1
 	fi
 	echo -n "正在下载Caddy安装包..."
-	[[ `wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null` ]] && echo -e "\r$prompt_info Caddy安装包下载完成" || echo -e "\r$prompt_error Caddy安装包下载失败" && exit 1
+	wget --no-check-certificate -O "$caddy_installer" $caddy_download_link 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r$prompt_info Caddy安装包下载完成"
+	else
+		echo -e "\r$prompt_error Caddy安装包下载失败" && exit 1
+	fi
 
 	echo -n "正在解压Caddy安装包..."
 	mkdir -p $caddy_dir
@@ -451,6 +456,11 @@ description() {
 	echo -e "                         请选择操作："
 	echo -e "                           ${green}m.${none} 返回主菜单"
 	echo -e "                           ${green}q.${none} 退出"
+	read -n1 des_picking
+	case $des_picking in
+		q) exit 1;;
+		*) Menu;;
+	esac
 }
 
 Menu(){
