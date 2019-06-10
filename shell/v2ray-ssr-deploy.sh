@@ -245,11 +245,11 @@ Install_Caddy() {
 
 	if [[ -f `which systemctl` ]]; then
 		cp -f ${caddy_dir}init/linux-systemd/caddy.service /lib/systemd/system/
-		[[ systemctl enable caddy >/dev/null ]] && echo -e "${prompt_info} Caddy已设置开机自启"
+		[[ `systemctl enable caddy >/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
 	else
 		cp -f ${caddy_dir}init/linux-sysvinit/caddy /etc/init.d/caddy
 		chmod +x /etc/init.d/caddy
-		[[ update-rc.d -f caddy defaults >/dev/null ]] && echo -e "${prompt_info} Caddy已设置开机自启"
+		[[ `update-rc.d -f caddy defaults >/dev/null` ]] && echo -e "${prompt_info} Caddy已设置开机自启"
 	fi
 
 	mkdir -p /etc/ssl/caddy
@@ -440,7 +440,8 @@ description() {
 	echo -e "2. V2ray安装使用最安全的ws+tls+web的形式，会附带一篇英语美文作为伪装网站"
 	echo -e "3. 运行过程中显示信息的颜色含义：${green}绿色${none} - 正常，${yellow}黄色${none} - 需要注意${red}红色${none} - 错误\n"
 	echo -e "                         ${yellow}===== 关于脚本 =====${none}"
-	echo -e "1. 推荐使用最新版的脚本：\n"
+	echo -e "1. 推荐通过网络使用最新版的脚本："
+	echo -e "  bash <(curl -L -s https://raw.githubusercontent.com/JadeVane/shell/master/shell/v2ray-ssr-deploy.sh)"
 	echo -e "2. 使用脚本中如发现问题，可在以下站点反馈："
 	echo -e "  https://github.com/JadeVane/shell/issues"
 	echo -e "  https://www.wenjinyu.me/board\n"
