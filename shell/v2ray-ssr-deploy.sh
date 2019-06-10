@@ -102,13 +102,13 @@ V2ray_Config_Reader() {
 	echo
 }
 
-Caddy_install_judgment(){
+Httpd_Remove_judgment(){
+	echo -ne "----------------------- ${red}警告${none} ---------------------\n检测到已安装httpd/apache，Caddy可能与httpd冲突，所以在安装caddy过程中会卸载httpd，请选择：\n------------------------------\n${green}y. ${none}卸载httpd并继续安装Caddy\n${green}n. ${none}取消安装Caddy并返回主菜单\n\n${green}q. ${none}退出\n------------------------------\n是否继续？[y/n/q]："
     read -n1 yn
     case $yn in
-        y) echo;;
-        n) Menu;;
-        *) echo -ne "\r输入错误，请重新输入："
-           Caddy_install_judgment;;
+        y) echo -n "正在卸载httpd/apache2..."
+		   systemctl stop httpd && yum remove httpd -y 1>/dev/null 2>&1 && echo -e "\r$prompt_warning httpd/apache2卸载完成";;
+        *) Menu;;
     esac
     echo
 }
@@ -116,7 +116,7 @@ Caddy_install_judgment(){
 Firewall_Setting(){
 	echo "------------------- 防火墙配置 -------------------"
 	if command -v firewall-cmd 2>&1 1>/dev/null; then
-		echo -e "${prompt_info} 开始进行firewalld防火墙配置"
+		echo -e "${prompt_info} 已安装firewalld，开始进行防火墙配置"
 		systemctl status firewalld 2>&1 1>/dev/null
 		if [ $? -eq 0 ]; then
 			firewall-cmd --permanent --zone=public --remove-port=443/tcp 2>&1 1>/dev/null
@@ -137,7 +137,7 @@ Firewall_Setting(){
 				firewall-cmd --permanent --zone=public --remove-port=${Ss_Single_Port}/udp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/tcp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --add-port=${Ss_Single_Port}/udp 2>&1 1>/dev/null
-				firewall-cmd --reload
+				firewall-cmd --reload 2>&1 1>/dev/null
 				echo -e "$prompt_info 已放行SS端口：${Ss_Single_Port}"
 			fi
 		else
@@ -200,14 +200,10 @@ Firewall_Setting(){
 }
 
 Install_Caddy() {
-	echo -ne "----------------------- 警告 ---------------------\nCaddy可能与httpd冲突，如果系统中已安装httpd，则\n在安装caddy过程中会卸载httpd，请选择：\n------------------------------\n${green}y. ${none}继续安装Caddy\n${green}n. ${none}取消安装Caddy并返回主菜单\n\n${green}q. ${none}退出\n------------------------------\n是否继续？[y/n/q]："
-	Caddy_install_judgment
 
 	echo "-------------------- 安装Caddy -------------------"
 	if [[ $cmd == "yum" ]]; then
-		[[ $(pgrep "httpd") ]] && echo -n "检测到已安装httpd，正在卸载httpd..." && systemctl stop httpd && yum remove httpd -y 1>/dev/null 2>&1 && echo -e "\r$prompt_warning httpd卸载完成                      "
-	else
-		[[ $(pgrep "apache2") ]] && echo -n "检测到已安装apache2，正在卸载apache2..." && service apache2 stop && apt remove apache2* -y 1>/dev/null 2>&1 && echo -e "\r$prompt_warning httpd卸载完成                          "
+		[[ $(pgrep "httpd") || $(pgrep "apache2") ]] && Httpd_Remove_judgment
 	fi
 
 	local caddy_dir="/tmp/caddy_install/"
@@ -446,7 +442,7 @@ description() {
 	echo -e "                         ${yellow}===== 使用事项 =====${none}"
 	echo -e "1. BBR的安装目前仅在CentOS 7平台上进行测试，不保证在其他平台也能用"
 	echo -e "2. V2ray安装使用最安全的ws+tls+web的形式，会附带一篇英语美文作为伪装网站"
-	echo -e "3. 运行过程中显示信息的颜色含义：${green}绿色${none} - 正常，${yellow}黄色${none} - 需要注意${red}红色${none} - 错误\n"
+	echo -e "3. 运行过程中显示信息的颜色含义：\n  ${green}绿色${none} - 正常\n  ${yellow}黄色${none} - 需要注意\n  ${red}红色${none} - 错误\n"
 	echo -e "                         ${yellow}===== 关于脚本 =====${none}"
 	echo -e "1. 推荐通过网络使用最新版的脚本："
 	echo -e "  bash <(curl -L -s https://raw.githubusercontent.com/JadeVane/shell/master/shell/v2ray-ssr-deploy.sh)"
