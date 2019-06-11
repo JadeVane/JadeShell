@@ -132,12 +132,16 @@ V2ray_Config_Reader() {
 	printf "V2Ray端口，非80/443（默认：%-*s）：" $Default_Width $V2ray_Port_default
 	read V2ray_Port
 		[[ -z $V2ray_Port ]] && V2ray_Port=$V2ray_Port_default
-	printf "   ssrpanel同步端口（默认：%-*s）："  $Default_Width $V2ray_Ssrpanel_Port_default
-	read V2ray_Ssrpanel_Port
-		[[ -z $V2ray_Ssrpanel_Port ]] && V2ray_Ssrpanel_Port=$V2ray_Ssrpanel_Port_default
-	printf "            Node ID（默认：%-*s）：" $Default_Width $Node_Id_default
-	read Node_Id
-		[[ -z $Node_Id ]] && Node_Id=$Node_Id_default
+
+	if [[ $menu_picking -eq 2 ]]; then
+		printf "   ssrpanel同步端口（默认：%-*s）："  $Default_Width $V2ray_Ssrpanel_Port_default
+		read V2ray_Ssrpanel_Port
+			[[ -z $V2ray_Ssrpanel_Port ]] && V2ray_Ssrpanel_Port=$V2ray_Ssrpanel_Port_default
+		printf "            Node ID（默认：%-*s）：" $Default_Width $Node_Id_default
+		read Node_Id
+			[[ -z $Node_Id ]] && Node_Id=$Node_Id_default
+	fi
+
 	echo
 }
 
@@ -389,10 +393,9 @@ Install_Caddy() {
 			-e "s/V2ray_Path/$V2ray_Path/" \
 			-e "s/V2ray_Port/$V2ray_Port/" Caddyfile
 	mv -f Caddyfile /etc/caddy/
-	echo -e "\r$prompt_info 创建伪装网站完成，伪装网址：$V2ray_Domain\n"
-	Firewall_Setting
-
-	systemctl restart caddy
+	echo -ne "\r$prompt_info 创建伪装网站完成，伪装网址：$V2ray_Domain\n正在重启Caddy..."
+	systemctl restart caddy 1>/dev/null 2>/dev/null
+	echo -e "\r${prompt_info} Caddy重启完成\n"
 }
 
 Install_SSR() {
@@ -465,7 +468,7 @@ Install_V2ray() {
 	fi
 
 	echo -n "开始获取V2ray配置文件..."
-	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null
+	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-ssrpanel-config.json 2>/dev/null
 	if [[ $? -eq 0 ]]; then
 		echo -e "\r${prompt_info} 获取V2ray配置文件成功"
 	else
@@ -511,15 +514,81 @@ Install_V2ray() {
 	fi
 }
 
+Install_V2ray() {
+	echo "-------------------- V2Ray安装 -------------------"
+	echo -n "开始安装V2ray..."
+	bash <(curl -L -s https://install.direct/go.sh) 1>/dev/null 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} V2ray安装完成"
+	else
+		echo -e "\r${prompt_error} V2ray安装失败，正在退出安装程序..."
+		exit 1
+	fi
+
+	echo -n "开始获取V2ray配置文件..."
+	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} 获取V2ray配置文件成功"
+	else
+		echo -e "\r${prompt_error} 获取V2ray配置文件失败，正在退出安装程序..."
+		exit 1
+	fi
+	echo -n "开始配置V2ray..."
+	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
+			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
+
+			-e "s/V2ray_UUID/$V2ray_UUID/g" \
+			-e "s/V2ray_Domain/$V2ray_Domain/g" \
+
+			-e "s/V2ray_Path/$V2ray_Path/g" config.json
+	echo -n "正在新建用户..."
+	V2ray_UUID=`/usr/bin/v2ray/v2ctl uuid`
+	sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"}'
+	echo -e "\r${prompt_info} 新建用户完成"
+	echo -e "${prompt_warning} 用户信息如下：\n------------------------------\n      id : $V2ray_UUID\n   level : 0\nalter ID : $V2ray_Alter_Id\n   email : $V2ray_Email\n------------------------------"
+	mv -f config.json /etc/v2ray/
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} 配置文件写入完成"
+	else
+		echo -e "\r${prompt_error} 配置文件写入失败，正在退出安装程序..."
+		exit 1
+	fi
+
+	echo -n "正在启动V2ray..."
+	systemctl restart v2ray 1>/dev/null 2>&1
+	systemctl enable v2ray 1>/dev/null 2>&1
+	echo -ne "\r正在检测V2ray运行状态..."
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} 已启动V2ray并设置开机自启\n"
+	else
+		echo -e "\r${prompt_error} 启动v2ray失败，正在退出安装程序..."
+		exit 1
+	fi
+}
+
+V2ray_Management() {
+
+	# 添加用户
+	V2ray_UUID=`/usr/bin/v2ray/v2ctl uuid`
+
+	if [[ `grep "\"id\":" v2ray-config.json | wc -L` ]]; then
+		sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"},' 
+	else
+		sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"}'
+	fi
+
+
+	grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $6}'
+}
 #============ 菜单选项 ============
 
 
 Menu_Install_V2ray() {
 	Init_Value
 	V2ray_Config_Reader
-	Db_Config_Reader
 	Pre_Config
 	Firewall_Setting # 防火墙配置需在v2ray安装之前，在用户输入配置数值之后
+
 	Install_V2ray
 }
 
@@ -603,8 +672,8 @@ Menu(){
 	echo -e "     更新地址：https://www.wenjinyu.me${none}"
 	echo -e "==========================================="
 	echo -e "\n   ------------- 主菜单 ------------"
-	echo -e "   ${green}1.${none} 安装 V2Ray（作为节点）"
-	echo -e "   ${green}2.${none} 安装 V2Ray+Caddy"
+	echo -e "   ${green}1.${none} 安装 V2Ray（独立运行）"
+	echo -e "   ${green}2.${none} 安装 V2Ray+Caddy（作为节点）"
 	echo -e "   ${green}3.${none} 安装 SSR（作为节点）"
 	echo -e "   ${green}4.${none} 启用 BBR（仅CentOS）\n"
 	echo -e "   ${green}d.${none} 说明（${yellow}务必先读${none}）\n"
