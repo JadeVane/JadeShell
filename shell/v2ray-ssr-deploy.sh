@@ -41,6 +41,7 @@ prompt_warning="${yellow}[Warning]${none}"
 prompt_error="${red}[Error]${none}"
 
 pre_config_status=0
+Default_Width=9
 
 [ $(id -u) != "0" ] && { echo -e "${prompt_error}错误: 请以root权限运行"; exit 1; }
 sys_bit=$(uname -m)
