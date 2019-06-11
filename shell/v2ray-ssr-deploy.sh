@@ -32,6 +32,7 @@ Init_Value() {
 	V2ray_Domain_Caddy_default=":80 :443"
 	V2ray_Path_default="hello"
 	V2ray_Alter_Id_default="16"
+	V2ray_Email_default="abc@abc.com"
 
 	# 数据库
 	Db_Host_default="127.0.0.1"
@@ -120,19 +121,31 @@ Db_Config_Reader() {
 
 V2ray_Config_Reader() {
 	echo "-------------------- v2ray配置 -------------------"
+
 	printf "           伪装域名（默认：%-*s）：" $Default_Width $(if [[ $V2ray_Domain_Caddy_default == ":80 :443" ]]; then echo "localhost"; else echo $V2ray_Domain_Caddy_default; fi)
 	read V2ray_Domain
 		[[ -z $V2ray_Domain ]] && V2ray_Domain=$V2ray_Domain_Caddy_default
+
 	printf "               路径（默认：%-*s）：" $Default_Width $V2ray_Path_default
 	read V2ray_Path
 		[[ -z $V2ray_Path ]] && V2ray_Path=$V2ray_Path_default
+
 	printf "             额外ID（默认：%-*s）：" $Default_Width $V2ray_Alter_Id_default
 	read V2ray_Alter_Id
 		[[ -z $V2ray_Alter_Id ]] && V2ray_Alter_Id=$V2ray_Alter_Id_default
+
 	printf "V2Ray端口，非80/443（默认：%-*s）：" $Default_Width $V2ray_Port_default
 	read V2ray_Port
 		[[ -z $V2ray_Port ]] && V2ray_Port=$V2ray_Port_default
 
+	# v2ray独立运行余下数据
+	if [[ $menu_picking -eq 1 ]]; then
+		printf "    用户邮箱（默认：%-*s）：" $Default_Width $V2ray_Email_default
+		read V2ray_Email
+			[[ -z $V2ray_Email ]] && V2ray_Email=$V2ray_Email_default
+	fi
+
+	# v2ray节点余下数据
 	if [[ $menu_picking -eq 2 ]]; then
 		printf "   ssrpanel同步端口（默认：%-*s）："  $Default_Width $V2ray_Ssrpanel_Port_default
 		read V2ray_Ssrpanel_Port
@@ -514,7 +527,7 @@ Install_V2ray() {
 	fi
 }
 
-Install_V2ray() {
+Install_V2ray_Only() {
 	echo "-------------------- V2Ray安装 -------------------"
 	echo -n "开始安装V2ray..."
 	bash <(curl -L -s https://install.direct/go.sh) 1>/dev/null 2>/dev/null
@@ -536,10 +549,9 @@ Install_V2ray() {
 	echo -n "开始配置V2ray..."
 	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
 			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
-
 			-e "s/V2ray_UUID/$V2ray_UUID/g" \
 			-e "s/V2ray_Domain/$V2ray_Domain/g" \
-
+			-e "s/V2ray_Email/$V2ray_Email/g" \
 			-e "s/V2ray_Path/$V2ray_Path/g" config.json
 	echo -n "正在新建用户..."
 	V2ray_UUID=`/usr/bin/v2ray/v2ctl uuid`
@@ -566,30 +578,69 @@ Install_V2ray() {
 	fi
 }
 
-V2ray_Management() {
+V2rayManagement_DisplayInfo() {
+	echo -n "正在获取配置信息..."
+	[[ ! -f /etc/v2ray/config.json ]] && echo -e "\r${prompt_error} 用户配置文件（/etc/v2ray/config.json）不存在，正在退出程序..." && exit 1
 
-	# 添加用户
+	# 获取用户信息
+	ids=`grep \"id\" /etc/v2ray/config.json | wc -l`
+	v2rayManage_users_info="序号                 id                    level  alterId         email\n--------------------------------------------------------------------------------------\n"
+	if [[ $ids -eq 0 ]]; then
+		echo "${v2rayManage_users_info}无用户\n--------------------------------------------------------------------------------------\n"
+	else
+		for (( id_count = 1; id_count <= ids; id_count++ )); do
+			v2rayManage_id[$id_count]=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $6}'`
+			v2rayManage_level=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $9}' | grep -o "[0-9]*"`
+			v2rayManage_alterid=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $11}' | grep -o "[0-9]*"`
+			v2rayManage_email=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $14}'`
+			v2rayManage_users_info="$v2rayManage_users_info${green}${id_count}.${none} $v2rayManage_id    v2rayManage_level       $v2rayManage_alterid     $v2rayManage_email\n"
+		done
+		v2rayManage_users_info="$v2rayManage_users_info--------------------------------------------------------------------------------------\n"
+		echo -ne "$v2rayManage_users_info"
+	fi
+}
+
+V2rayManagement_Adduser() {
+	echo "正在添加用户，请输入以下信息："
+	printf "             额外ID（默认：%-*s）：" $Default_Width $V2ray_Alter_Id_default
+	read V2ray_Alter_Id
+		[[ -z $V2ray_Alter_Id ]] && V2ray_Alter_Id=$V2ray_Alter_Id_default
+	printf "    用户邮箱（默认：%-*s）：" $Default_Width $V2ray_Email_default
+	read V2ray_Email
+		[[ -z $V2ray_Email ]] && V2ray_Email=$V2ray_Email_default
 	V2ray_UUID=`/usr/bin/v2ray/v2ctl uuid`
 
+	echo -n "开始添加用户..."
 	if [[ `grep "\"id\":" v2ray-config.json | wc -L` ]]; then
 		sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"},' 
 	else
 		sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"}'
 	fi
+	systemctl restart v2ray
 
-
-	grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $6}'
+	echo -e "${prompt_info} 添加用户完成\n${prompt_warning} 用户信息如下：\n------------------------------\n      id : $V2ray_UUID\n   level : 0\nalter ID : $V2ray_Alter_Id\n   email : $V2ray_Email\n------------------------------\n"
+	echo -e "请选择操作：\n${green}m.${none}返回主菜单\n${green}2.${none}退出"
+	read -n1 v2raymanage_picking
+	case $v2raymanage_picking in
+		q) exit 0;;
+		*) Menu;;
+	esac
 }
+
+V2rayManagement_Deluser() {
+	[[ $ids -eq 0 ]] && echo -e "无用户可删除"
+	# ++++++++ 缺少：判断是否返回主菜单 ++++++
+	Menu_V2rayManagement
+
+}
+
 #============ 菜单选项 ============
-
-
 Menu_Install_V2ray() {
 	Init_Value
 	V2ray_Config_Reader
 	Pre_Config
 	Firewall_Setting # 防火墙配置需在v2ray安装之前，在用户输入配置数值之后
-
-	Install_V2ray
+	Install_V2ray_Only
 }
 
 Menu_Install_V2ray_Caddy() {
@@ -615,6 +666,28 @@ Menu_Open_BBR(){
 	cd
 	wget -N --no-check-certificate "https://raw.githubusercontent.com/JadeVane/shell/master/others/bbr_tcp_mod.sh"
 	bash bbr_tcp_mod.sh
+}
+
+Menu_V2rayManagement() {
+	clear
+	echo -e "$copyright_info"
+	if [[ -n `grep "\"ssrpanel\"" /etc/v2ray/config.json` ]]; then
+		echo -e "${red}警告：${none} 检测到v2ray已作为ssrpanl节点安装，通过此脚本对用户的操作将无法在面板查询到相关信息\n是否继续？[y/n]"
+		read -n1 yn
+		case $yn in
+		y) echo;;
+		n) Menu;;
+		esac
+	fi
+	echo -e "   --------- V2ray用户管理 ---------"
+	echo "   ${green}1.${none} 添加用户\n   ${green}2.${none} 删除用户\n   ${green}m.${none} 返回主菜单\n   ------------------\n   请选择需要进行的操作："
+	read -n1 v2ray_manage_picking
+	echo
+	case $v2ray_manage_picking in
+		1) V2rayManagement_Adduser;;
+		2) V2rayManagement_Deluser;;
+		m) Menu;;
+	esac
 }
 
 Menu_Description() {
@@ -655,6 +728,8 @@ picking() {
 		   Menu_Install_SSR;;
 		4) clear
 		   Menu_Open_BBR;;
+		5) clear
+		   Menu_V2rayManagement;;
 		d) clear
 		   Menu_Description;;
 		q) echo
@@ -666,16 +741,14 @@ picking() {
 
 Menu(){
 	clear
-	echo -e "==========================================="
-	echo -e "       ${button} SSRPanel V2ray节点一键部署脚本 ${none} v1.0\n"
-	echo -e "     ${green}系统要求：CentOS 7+ or Ubuntu 14+"
-	echo -e "     更新地址：https://www.wenjinyu.me${none}"
-	echo -e "==========================================="
-	echo -e "\n   ------------- 主菜单 ------------"
+	copyright_info="===========================================\n       ${button} SSRPanel V2ray节点一键部署脚本 ${none} v1.0\n\n     ${green}系统要求：CentOS 7+ or Ubuntu 14+\n     更新地址：https://www.wenjinyu.me${none}\n===========================================\n"
+	echo -e "$copyright_info"
+	echo -e "   ------------- 主菜单 ------------"
 	echo -e "   ${green}1.${none} 安装 V2Ray（独立运行）"
 	echo -e "   ${green}2.${none} 安装 V2Ray+Caddy（作为节点）"
 	echo -e "   ${green}3.${none} 安装 SSR（作为节点）"
-	echo -e "   ${green}4.${none} 启用 BBR（仅CentOS）\n"
+	echo -e "   ${green}4.${none} 安装 BBR（仅CentOS）\n"
+	echo -e "   ${green}5.${none} 管理 V2Ray（独立运行）\n"
 	echo -e "   ${green}d.${none} 说明（${yellow}务必先读${none}）\n"
 	echo -e "   ${green}q.${none} 退出"
 	echo -e "   ---------------------------------"
