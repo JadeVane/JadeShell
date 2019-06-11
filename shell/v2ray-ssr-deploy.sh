@@ -10,38 +10,8 @@ title="\033[42;37m"
 button="\033[47;30m"
 green="\033[32m"
 
-# 配置默认值
-# V2Ray
-V2ray_Port_default="10086"
-V2ray_Ssrpanel_Port_default="10087"
-V2ray_Domain_default=":80 :443"
-V2ray_Path_default="hello"
-V2ray_Alter_Id_default="16"
-# 数据库
-Db_Host_default="127.0.0.1"
-Db_Name_default="ssrpanel"
-Db_User_default="ssrpanel"
-Db_Port_default="3306"
-Db_Password_default="ssrpanel"
-Node_Id_default="1"
-# SSR
-Ss_Protocol_default="origin"
-Ss_Obfs_default="plain"
-Ss_Method_default="none"
-Ss_Single_Port_Enable_default="false"
-Ss_Single_Port_default="8080"
-Ss_Password_default="hello"
-Ss_Online_Limit_default=""
-Ss_Speed_Limit_default="0"
-Ss_Transfer_Ratio_default=1
-
-# 提示信息
-prompt_info="${green}[Info]${none}"
-prompt_warning="${yellow}[Warning]${none}"
-prompt_error="${red}[Error]${none}"
-
+# 只进行一次预配置，运行Pre_Config后数值将被改为1
 pre_config_status=0
-Default_Width=9
 
 [ $(id -u) != "0" ] && { echo -e "${prompt_error}错误: 请以root权限运行"; exit 1; }
 sys_bit=$(uname -m)
@@ -54,6 +24,43 @@ else
 fi
 
 #=========== 组件 =============
+# 配置初始化
+Init_Value() {
+	# V2Ray
+	V2ray_Port_default="10086"
+	V2ray_Ssrpanel_Port_default="10087"
+	V2ray_Domain_Caddy_default=":80 :443"
+	V2ray_Path_default="hello"
+	V2ray_Alter_Id_default="16"
+
+	# 数据库
+	Db_Host_default="127.0.0.1"
+	Db_Name_default="ssrpanel"
+	Db_User_default="ssrpanel"
+	Db_Port_default="3306"
+	Db_Password_default="ssrpanel"
+	Node_Id_default="1"
+
+	# SSR
+	Ss_Protocol_default="origin"
+	Ss_Obfs_default="plain"
+	Ss_Method_default="none"
+	Ss_Single_Port_Enable_default="false"
+	Ss_Single_Port_default="8080"
+	Ss_Password_default="hello"
+	Ss_Online_Limit_default=""
+	Ss_Speed_Limit_default="0"
+	Ss_Transfer_Ratio_default=1
+	
+	# 提示信息
+	prompt_info="${green}[Info]${none}"
+	prompt_warning="${yellow}[Warning]${none}"
+	prompt_error="${red}[Error]${none}"
+	
+	# "（默认：xxx）"中"xxx"的默认字符宽度
+	Default_Width=9
+}
+
 systemctl() {
 	if [[ -f `which systemctl` ]]; then
 		systemctl $1 $2
@@ -66,22 +73,29 @@ Pre_Config() {
 	if [[ pre_config_status -eq 0 ]]; then
 		echo "--------------------- 预配置 ---------------------"
 		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info epel安装完成"
+
 		echo -n "开始更新..."
 		$cmd update -y  1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
+
 		echo -n "开始安装必要组件..."
 		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]
+
 		echo -n "开始更新至上海时区..."
 		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 1>/dev/null 2>/dev/null
 		echo -ne "\r${prompt_info} 成功更新至上海时区\n开始同步时间..."
+
 		ntpdate cn.pool.ntp.org  1>/dev/null 2>/dev/null
 		hwclock -w 1>/dev/null 2>/dev/null
 		echo -ne "\r${prompt_info} 成功同步时间\n正在设置自动更新时间任务..."
+
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
 		systemctl restart crond 1>/dev/null 2>/dev/null
 		echo -e "\r${prompt_info} 自动更新时间任务设置完成"
-		pre_config_status=1
+
 		echo -e "$prompt_info 时间同步完成\n"
+
+		pre_config_status=1
 	fi
 }
 
@@ -107,9 +121,9 @@ Db_Config_Reader() {
 
 V2ray_Config_Reader() {
 	echo "-------------------- v2ray配置 -------------------"
-	printf "           伪装域名（默认：%-*s）：" $Default_Width $V2ray_Domain_default
+	printf "           伪装域名（默认：%-*s）：" $Default_Width $(if [[ $V2ray_Domain_Caddy_default == ":80 :443" ]]; then echo "localhost"; else echo $V2ray_Domain_Caddy_default; fi)
 	read V2ray_Domain
-		[[ -z $V2ray_Domain ]] && V2ray_Domain=$V2ray_Domain_default
+		[[ -z $V2ray_Domain ]] && V2ray_Domain=$V2ray_Domain_Caddy_default
 	printf "               路径（默认：%-*s）：" $Default_Width $V2ray_Path_default
 	read V2ray_Path
 		[[ -z $V2ray_Path ]] && V2ray_Path=$V2ray_Path_default
@@ -491,14 +505,16 @@ Install_V2ray() {
 
 
 Menu_Install_V2ray() {
+	Init_Value
 	V2ray_Config_Reader
 	Db_Config_Reader
 	Pre_Config
-	Firewall_Setting
+	Firewall_Setting # 防火墙配置需在v2ray安装之前，在用户输入配置数值之后
 	Install_V2ray
 }
 
 Menu_Install_V2ray_Caddy() {
+	Init_Value
 	V2ray_Config_Reader
 	Db_Config_Reader
 	Pre_Config
@@ -508,10 +524,11 @@ Menu_Install_V2ray_Caddy() {
 }
 
 Menu_Install_SSR(){
+	Init_Value
 	Pre_Config
 	SSR_Config_Reader
 	Db_Config_Reader
-	Firewall_Setting
+	Firewall_Setting # 防火墙配置需在SSR安装之前，在用户输入配置数值之后
 	Install_SSR
 }
 
