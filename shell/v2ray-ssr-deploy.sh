@@ -78,22 +78,21 @@ Pre_Config() {
 		$cmd update -y  1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
 
 		echo -n "开始安装必要组件..."
-		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]
+		$cmd install -y wget curl unzip git gcc vim lrzsz screen ntp ntpdate cron net-tools telnet python-pip m2crypto 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 必要组件安装完成 " || [[ `echo -e "\r$prompt_error 必要组件安装失败" && exit ` ]]	
 
 		echo -n "开始更新至上海时区..."
 		echo yes | cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime 1>/dev/null 2>/dev/null
-		echo -ne "\r${prompt_info} 成功更新至上海时区\n开始同步时间..."
+		echo -ne "\r${prompt_info} 更新至上海时区完成\n开始同步时间..."
 
 		ntpdate cn.pool.ntp.org  1>/dev/null 2>/dev/null
 		hwclock -w 1>/dev/null 2>/dev/null
-		echo -ne "\r${prompt_info} 成功同步时间\n正在设置自动更新时间任务..."
+		echo -ne "\r${prompt_info} 同步时间完成\n正在设置自动更新时间任务..."
 
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
+		echo -ne "\r正在重启crond进程..."
 		systemctl restart crond 1>/dev/null 2>/dev/null
-		echo -e "\r${prompt_info} 自动更新时间任务设置完成"
-
-		echo -e "$prompt_info 时间同步完成\n"
+		echo -e "\r${prompt_info} 自动更新时间任务设置完成\n$prompt_info 时间同步完成\n"
 
 		pre_config_status=1
 	fi
@@ -460,7 +459,7 @@ Install_V2ray() {
 	if [[ $? -eq 0 ]]; then
 		echo -e "\r${prompt_info} V2ray安装完成"
 	else
-		echo -e "\r${prompt_error} V2ray安装失败，正在退出安装程序"
+		echo -e "\r${prompt_error} V2ray安装失败，正在退出安装程序..."
 		exit 1
 	fi
 
@@ -469,7 +468,7 @@ Install_V2ray() {
 	if [[ $? -eq 0 ]]; then
 		echo -e "\r${prompt_info} 获取V2ray配置文件成功"
 	else
-		echo -e "\r${prompt_error} 获取V2ray配置文件失败，正在退出安装程序"
+		echo -e "\r${prompt_error} 获取V2ray配置文件失败，正在退出安装程序..."
 		exit 1
 	fi
 	echo -n "开始配置V2ray..."
@@ -487,16 +486,26 @@ Install_V2ray() {
 	if [[ $? -eq 0 ]]; then
 		echo -e "\r${prompt_info} 配置文件写入完成"
 	else
-		echo -e "\r${prompt_error} 配置文件写入失败，正在退出安装程序"
+		echo -e "\r${prompt_error} 配置文件写入失败，正在退出安装程序..."
 		exit 1
 	fi
+
+	echo -n "开始安装v2ray-ssrpanel插件..."
+	curl -L -s https://raw.githubusercontent.com/ColetteContreras/v2ray-ssrpanel-plugin/master/install-release.sh | bash
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} 安装v2ray-ssrpanel插件完成"
+	else
+		echo -e "\r${prompt_error} 安装v2ray-ssrpanel插件失败"
+	fi
+
 	echo -n "正在启动V2ray..."
 	systemctl restart v2ray 1>/dev/null 2>&1
 	systemctl enable v2ray 1>/dev/null 2>&1
+	echo -ne "\r正在检测V2ray运行状态..."
 	if [[ $? -eq 0 ]]; then
-		echo -e "${prompt_info} 已启动V2ray并设置开机自启\n"
+		echo -e "\r${prompt_info} 已启动V2ray并设置开机自启\n"
 	else
-		echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序"
+		echo -e "\r${prompt_error} 启动v2ray失败，正在退出安装程序..."
 		exit 1
 	fi
 }
