@@ -17,7 +17,6 @@ V2ray_Ssrpanel_Port="10087"
 V2ray_Domain=":80 :443"
 V2ray_Path="hello"
 V2ray_Alter_Id="16"
-V2ray_Transfer_Ratio=1
 # 数据库
 Db_Host="127.0.0.1"
 Db_Name="ssrpanel"
@@ -34,6 +33,7 @@ Ss_Single_Port="8080"
 Ss_Password="hello"
 Ss_Online_Limit=""
 Ss_Speed_Limit="0"
+Ss_Transfer_Ratio=1
 
 # 提示信息
 prompt_info="${green}[Info]${none}"
@@ -143,7 +143,7 @@ SSR_Config_Reader() {
 	display_info="$display_info     已选择混淆方式（默认：plain    ）：$Ss_Obfs"
 	echo -e "$display_info"
 	read -p "            Node ID（默认：1        ）：" Node_Id
-	read -p "       流量计算比例（默认：1        ）：" V2ray_Transfer_Ratio
+	read -p "       流量计算比例（默认：1        ）：" Ss_Transfer_Ratio
     read -p "     是否强制单端口（默认：否  ）[y/n]：" Ss_Single_Port_Enable
     case $Ss_Single_Port_Enable in
     	y) Ss_Single_Port_Enable="true";;
@@ -172,7 +172,7 @@ Httpd_Remove_judgment(){
 Firewall_Setting() {
 	echo "------------------- 防火墙配置 -------------------"
 	if command -v firewall-cmd 2>&1 1>/dev/null; then
-		echo -e "${prompt_info} 开始进行firewalld防火墙配置"
+		echo -e "${prompt_info} 检测到系统已安装firewalld，开始进行防火墙配置"
 		systemctl status firewalld 2>&1 1>/dev/null
 		if [ $? -eq 0 ]; then
 			firewall-cmd --permanent --zone=public --remove-port=443/tcp 2>&1 1>/dev/null
@@ -185,7 +185,7 @@ Firewall_Setting() {
 				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --add-port=${V2ray_Port}/udp 2>&1 1>/dev/null
-				firewall-cmd --reload
+				firewall-cmd --reload 2>&1 1>/dev/null
 				echo -e "$prompt_info 已放行V2ray端口：${V2ray_Port}"
 			fi
 			if [[ $Ss_Single_Port ]]; then
@@ -201,7 +201,7 @@ Firewall_Setting() {
 		fi
 		echo -e "$prompt_info firewalld防火墙规则配置完成"
 	elif command -v iptables 2>&1 1>/dev/null; then
-		echo -e "${prompt_info} 开始进行iptables防火墙配置"
+		echo -e "${prompt_info} 检测到系统已安装iptables，开始进行防火墙配置"
 		/etc/init.d/iptables status 2>&1 1>/dev/null
 		if [ $? -eq 0 ]; then
 			iptables -D INPUT -p tcp --dport 443 -j ACCEPT
@@ -342,23 +342,41 @@ Install_SSR() {
 	echo -ne "开始下载SSR..."
 	cd /usr/
 	rm -rf /usr/shadowsocksr
-	[[ `git clone -b master https://github.com/JadeVane/shadowsocksr.git 1>/dev/null 2>/dev/null` ]] && echo -e "\r$prompt_warning 下载SSR成功   " || echo -e "\r$prompt_error 下载SSR失败   " && exit 1
+	git clone -b master https://github.com/JadeVane/shadowsocksr.git 1>/dev/null 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r$prompt_info 下载SSR成功   "
+	else
+		echo -e "\r$prompt_error 下载SSR失败，正在退出安装程序"
+		exit 1
+	fi
 
 	cd shadowsocksr
 	echo -n "开始安装依赖..."
 	bash setup_cymysql.sh 1>/dev/null 2>/dev/null
-	echo -ne "\r初始化配置...      "
-	bash initcfg.sh  1>/dev/null 2>/dev/null
-	echo -e '\r$prompt_info SSR安装完成'
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r$prompt_info 依赖安装完成"
+	else
+		echo -e "\r$prompt_error 依赖安装失败，正在退出安装程序"
+		exit 1
+	fi
 
-	echo -n "正在写入配置文件..."
+	echo -n "正在初始化配置...      "
+	bash initcfg.sh  1>/dev/null 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r$prompt_info 初始化配置成功"
+	else
+		echo -e "\r$prompt_error 初始化配置失败，正在退出安装程序"
+		exit 1
+	fi
+
+	echo -ne "\r$prompt_info SSR安装完成\n正在写入配置文件..."
 	sed -i  -e "s/Db_Host/$Db_Host/g" \
 			-e "s/Db_Port/$Db_Port/g" \
 			-e "s/Db_Name/$Db_Name/g" \
 			-e "s/Db_User/$Db_User/g" \
 			-e "s/Db_Password/$Db_Password/g" \
 			-e "s/Node_Id/$Node_Id/g" \
-			-e "s/V2ray_Transfer_Ratio/$V2ray_Transfer_Ratio/g" usermysql.json
+			-e "s/Ss_Transfer_Ratio/$Ss_Transfer_Ratio/g" usermysql.json
 
 	sed -i  -e "s/Ss_Single_Port_Enable/$Ss_Single_Port_Enable/g" \
 			-e "s/Ss_Single_Port/$Ss_Single_Port/g" \
@@ -371,6 +389,7 @@ Install_SSR() {
 
 	echo -ne "\r正在启动SSR...        "
 	wget -N --no-check-certificate -P /etc/systemd/system/shadowsocksr.service https://raw.githubusercontent.com/JadeVane/shell/master/resource/shadowsocksr.service  1>/dev/null 2>/dev/null
+	systemctl daemon-reload
 	systemctl start shadowsocksr
 	systemctl enable shadowsocksr 1>/dev/null 2>/dev/null
 	echo -e "\r$prompt_warning 已启动SSR并设置开机自启\n"
@@ -379,10 +398,22 @@ Install_SSR() {
 Install_V2ray() {
 	echo "-------------------- V2Ray安装 -------------------"
 	echo -n "开始安装V2ray..."
-	[[ `bash <(curl -L -s https://install.direct/go.sh) 1>/dev/null 2>/dev/null` ]] && echo -e "\r${prompt_info} V2ray安装完成"
+	bash <(curl -L -s https://install.direct/go.sh) 1>/dev/null 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} V2ray安装完成"
+	else
+		echo -e "\r${prompt_error} V2ray安装失败，正在退出安装程序"
+		exit 1
+	fi
 
 	echo -n "开始获取V2ray配置文件..."
-	[[ `wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null` ]] && echo -e "${prompt_info} 获取V2ray配置文件成功"
+	wget --no-check-certificate -O config.json https://raw.githubusercontent.com/JadeVane/shell/master/resource/v2ray-config.json 2>/dev/null
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} 获取V2ray配置文件成功"
+	else
+		echo -e "\r${prompt_error} 获取V2ray配置文件失败，正在退出安装程序"
+		exit 1
+	fi
 	echo -n "开始配置V2ray..."
 	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
 			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
@@ -394,9 +425,20 @@ Install_V2ray() {
 			-e "s/Db_Name/$Db_Name/g" \
 			-e "s/Db_User/$Db_User/g" \
 			-e "s/Db_Password/$Db_Password/g" config.json
-	[[ `mv -f onfig.json /etc/v2ray/` ]] && echo -e "\r${prompt_info} 配置文件写入完成"
-
-	[[ `systemctl restart v2ray 1>/dev/null 2>&1 && systemctl enable v2ray 1>/dev/null 2>&1` ]] && echo -e "${prompt_info} 已启动V2ray并设置开机自启\n" || [[ `echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序" && exit 1` ]]
+	mv -f config.json /etc/v2ray/
+	if [[ $? -eq 0 ]]; then
+		echo -e "\r${prompt_info} 配置文件写入完成"
+	else
+		echo -e "\r${prompt_error} 配置文件写入失败，正在退出安装程序"
+		exit 1
+	fi
+	systemctl restart v2ray 1>/dev/null 2>&1 && systemctl enable v2ray 1>/dev/null 2>&1
+	if [[ $? -eq 0 ]]; then
+		echo -e "${prompt_info} 已启动V2ray并设置开机自启\n"
+	else
+		echo -e "${prompt_error} 启动v2ray失败，正在退出安装程序"
+		exit 1
+	fi
 }
 
 #============ 菜单选项 ============
@@ -445,7 +487,7 @@ Menu_Description() {
 	echo -e "  https://github.com/JadeVane/shell/issues"
 	echo -e "  https://www.wenjinyu.me/board\n"
 	echo -e "                         ${yellow}======== End =======${none}"
-	echo -e "                           ${green}c.${none} 更新脚本"
+	echo -e "                           ${green}c.${none} 更新脚本并运行"
 	echo -e "                           ${green}m.${none} 返回主菜单"
 	echo -e "                           ${green}q.${none} 退出"
 	echo -e "                           -------------"
