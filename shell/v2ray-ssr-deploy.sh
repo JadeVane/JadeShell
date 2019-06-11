@@ -77,7 +77,7 @@ Pre_Config() {
 		echo -ne "\r${prompt_info} 成功同步时间\n正在设置自动更新时间任务..."
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
-		systemctl restart crond
+		systemctl restart crond 1>/dev/null 2>/dev/null
 		echo -e "\r${prompt_info} 自动更新时间任务设置完成"
 		pre_config_status=1
 		echo -e "$prompt_info 时间同步完成"
@@ -445,17 +445,17 @@ Install_V2ray() {
 
 
 Menu_Install_V2ray() {
-	Pre_Config
 	V2ray_Config_Reader
 	Db_Config_Reader
+	Pre_Config
 	Firewall_Setting
 	Install_V2ray
 }
 
 Menu_Install_V2ray_Caddy() {
-	Pre_Config
 	V2ray_Config_Reader
 	Db_Config_Reader
+	Pre_Config
 	Firewall_Setting
 	Install_Caddy
 	Install_V2ray
