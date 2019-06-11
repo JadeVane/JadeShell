@@ -12,28 +12,28 @@ green="\033[32m"
 
 # 配置默认值
 # V2Ray
-V2ray_Port="10086"
-V2ray_Ssrpanel_Port="10087"
-V2ray_Domain=":80 :443"
-V2ray_Path="hello"
-V2ray_Alter_Id="16"
+V2ray_Port_default="10086"
+V2ray_Ssrpanel_Port_default="10087"
+V2ray_Domain_default=":80 :443"
+V2ray_Path_default="hello"
+V2ray_Alter_Id_default="16"
 # 数据库
-Db_Host="127.0.0.1"
-Db_Name="ssrpanel"
-Db_User="ssrpanel"
-Db_Port="3306"
-Db_Password="ssrpanel"
-Node_Id="1"
+Db_Host_default="127.0.0.1"
+Db_Name_default="ssrpanel"
+Db_User_default="ssrpanel"
+Db_Port_default="3306"
+Db_Password_default="ssrpanel"
+Node_Id_default="1"
 # SSR
-Ss_Protocol="origin"
-Ss_Obfs="plain"
-Ss_Method="none"
-Ss_Single_Port_Enable="false"
-Ss_Single_Port="8080"
-Ss_Password="hello"
-Ss_Online_Limit=""
-Ss_Speed_Limit="0"
-Ss_Transfer_Ratio=1
+Ss_Protocol_default="origin"
+Ss_Obfs_default="plain"
+Ss_Method_default="none"
+Ss_Single_Port_Enable_default="false"
+Ss_Single_Port_default="8080"
+Ss_Password_default="hello"
+Ss_Online_Limit_default=""
+Ss_Speed_Limit_default="0"
+Ss_Transfer_Ratio_default=1
 
 # 提示信息
 prompt_info="${green}[Info]${none}"
@@ -63,7 +63,7 @@ systemctl() {
 
 Pre_Config() {
 	if [[ pre_config_status -eq 0 ]]; then
-		echo "-------------- 预配置 ---------------"
+		echo "--------------------- 预配置 ---------------------"
 		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info epel安装完成"
 		echo -n "开始更新..."
 		$cmd update -y  1>/dev/null 2>/dev/null && echo -e "\r$prompt_info 更新完成" || [[ `echo -e "\r$prompt_error 更新失败" && exit 1` ]]
@@ -80,80 +80,123 @@ Pre_Config() {
 		systemctl restart crond 1>/dev/null 2>/dev/null
 		echo -e "\r${prompt_info} 自动更新时间任务设置完成"
 		pre_config_status=1
-		echo -e "$prompt_info 时间同步完成"
+		echo -e "$prompt_info 时间同步完成\n"
 	fi
 }
 
 Db_Config_Reader() {
 	echo "------------------- 数据库配置 -------------------"
-    read -p "      数据库┬  地址（默认：127.0.0.1）：" Db_Host
-	read -p "            ├─ 端口（默认：3306     ）：" Db_Port
-	read -p "            ├─ 名称（默认：ssrpanel ）：" Db_Name
-	read -p "            ├─ 用户（默认：ssrpanel ）：" Db_User
-	read -p "            └─ 密码（默认：ssrpanel ）：" Db_Password
+	printf "      数据库┬  地址（默认：%-*s）：\n" $Default_Width $Db_Host_default
+    read Db_Host
+		[[ -z $Db_Host ]] && Db_Host=$Db_Host_default
+	printf "            ├─ 端口（默认：%-*s）：\n" $Default_Width $Db_Port_default
+	read Db_Port
+		[[ -z $Db_Port ]] && Db_Port=$Db_Port_default
+	printf "            ├─ 名称（默认：%-*s）：\n" $Default_Width $Db_Name_default
+	read Db_Name
+		[[ -z $Db_Name ]] && Db_Name=$Db_Name_default
+	printf "            ├─ 用户（默认：%-*s）：\n" $Default_Width $Db_User_default
+	read Db_User
+		[[ -z $Db_User ]] && Db_User=$Db_User_default
+	printf "            └─ 密码（默认：%-*s）：\n" $Default_Width $Db_Password_default
+	read Db_Password
+		[[ -z $Db_Password ]] && Db_Password=$Db_Password_default
 	echo
 }
 
 V2ray_Config_Reader() {
 	echo "-------------------- v2ray配置 -------------------"
-	read -p "           伪装域名（默认：localhost）：" V2ray_Domain
-	read -p "               路径（默认：hello    ）：" V2ray_Path
-	read -p "             额外ID（默认：16       ）：" V2ray_Alter_Id
-	read -p "V2Ray端口，非80/443（默认：10086    ）：" V2ray_Port
-	read -p "   ssrpanel同步端口（默认：10087    ）：" V2ray_Ssrpanel_Port
-	read -p "            Node ID（默认：1        ）：" Node_Id
+	printf "           伪装域名（默认：%-*s）：\n" $Default_Width $V2ray_Domain_default
+	read V2ray_Domain
+		[[ -z $V2ray_Domain ]] && V2ray_Domain=$V2ray_Domain_default
+	printf "               路径（默认：%-*s）：\n" $Default_Width $V2ray_Path_default
+	read V2ray_Path
+		[[ -z $V2ray_Path ]] && V2ray_Path=$V2ray_Path_default
+	printf "             额外ID（默认：%-*s）：\n" $Default_Width $V2ray_Alter_Id_default
+	read V2ray_Alter_Id
+		[[ -z $V2ray_Alter_Id ]] && V2ray_Alter_Id=$V2ray_Alter_Id_default
+	printf "V2Ray端口，非80/443（默认：%-*s）：\n" $Default_Width $V2ray_Port_default
+	read V2ray_Port
+		[[ -z $V2ray_Port ]] && V2ray_Port=$V2ray_Port_default
+	printf "   ssrpanel同步端口（默认：%-*s）：\n"  $Default_Width $V2ray_Ssrpanel_Port_default
+	read V2ray_Ssrpanel_Port
+		[[ -z $V2ray_Ssrpanel_Port ]] && V2ray_Ssrpanel_Port=$V2ray_Ssrpanel_Port_default
+	printf "            Node ID（默认：%-*s）：\n" $Default_Width $Node_Id_default
+	read Node_Id
+		[[ -z $Node_Id ]] && Node_Id=$Node_Id_default
 	echo
 }
 
 SSR_Config_Reader() {
 	display_info="--------------------- SSR配置 --------------------\n"
 	echo $display_info
-	echo -ne "1. none（默认）\n2. rc4-md5\n3. aes-256-cfb\n4. chacha20\n\n请选择加密方式："
+	echo -ne "1. none（默认）\n2. rc4-md5\n3. aes-256-cfb\n4. chacha20\n\n"
+	printf "     请选择加密方式（默认：%-*s）：\n" $Default_Width $Ss_Method_default
 	read -n1 Ss_Method
 	case $Ss_Method in
 		1) Ss_Method="none";;
 		2) Ss_Method="rc4-md5";;
 		3) Ss_Method="aes-256-cfb";;
 		4) Ss_Method="chacha20";;
-		*) Ss_Method=$Ss_Method;;
+		*) Ss_Method=$Ss_Method_default;;
 	esac
 	clear
-	display_info="$display_info     已选择加密方式（默认：none     ）：$Ss_Method\n"
-	echo -ne "$display_info--------------------\n1. origin（默认）\n2. auth_sha1_v4\n3. auth_aes128_md5\n4. auth_chain_a\n\n请选择传输协议："
+	display_info="$display_info`printf '     已选择加密方式（默认：%-*s）：%s' $Default_Width $Ss_Method_default $Ss_Method`\n"
+	echo -ne "$display_info--------------------\n1. origin（默认）\n2. auth_sha1_v4\n3. auth_aes128_md5\n4. auth_chain_a\n\n"
+	printf "     请选择传输协议（默认：%-*s）：\n" $Default_Width $Ss_Protocol_default
 	read -n1 Ss_Protocol
 	case $Ss_Protocol in
 		1) Ss_Protocol="origin";;
 		2) Ss_Protocol="auth_sha1_v4";;
 		3) Ss_Protocol="auth_aes128_md5";;
 		4) Ss_Protocol="auth_chain_a";;
-		*) Ss_Protocol=$Ss_Protocol;;
+		*) Ss_Protocol=$Ss_Protocol_default;;
 	esac
 	clear
-	display_info="$display_info     已选择传输协议（默认：origin   ）：$Ss_Protocol\n"
-	echo -ne "$display_info--------------------\n1. plain（默认）\n2. http_simple\n3. http_post\n4. tls1.2_ticket_auth\n\n请选择混淆方式："
+	display_info="$display_info`printf '     已选择传输协议（默认：%-*s）：'$Default_Width $Ss_Protocol_default $Ss_Protocol`\n"
+	echo -ne "$display_info--------------------\n1. plain（默认）\n2. http_simple\n3. http_post\n4. tls1.2_ticket_auth\n\n"
+	printf "     请选择混淆方式（默认：%-*s）：\n" $Default_Width $Ss_Obfs_default
 	read -n1 Ss_Obfs
 	case $Ss_Obfs in
 		1) Ss_Obfs="plain";;
 		2) Ss_Obfs="http_simple";;
 		3) Ss_Obfs="http_post";;
 		4) Ss_Obfs="tls1.2_ticket_auth";;
-		*) Ss_Obfs=$Ss_Obfs;;
+		*) Ss_Obfs=$Ss_Obfs_default;;
 	esac
 	clear
-	display_info="$display_info     已选择混淆方式（默认：plain    ）：$Ss_Obfs"
+	display_info="$display_info`printf '          已选择混淆方式（默认：%-*s）：' $Default_Width $Ss_Obfs_default $Ss_Obfs`\n"
 	echo -e "$display_info"
-	read -p "            Node ID（默认：1        ）：" Node_Id
-	read -p "       流量计算比例（默认：1        ）：" Ss_Transfer_Ratio
-    read -p "     是否强制单端口（默认：否  ）[y/n]：" Ss_Single_Port_Enable
+	printf "            Node ID（默认：%-*s）：\n"  $Default_Width $Node_Id_default
+	read Node_Id
+		[[ -z $Node_Id ]] && Node_Id=$Node_Id_default
+	printf "       流量计算比例（默认：%-*s）：\n"  $Default_Width $Ss_Transfer_Ratio_default
+	read Ss_Transfer_Ratio
+		[[ -z $Ss_Transfer_Ratio ]] && Ss_Transfer_Ratio=$Ss_Transfer_Ratio_default
+	printf "是否强制单端口[y/n]（默认：%-*s）：\n"  $Default_Width $Ss_Single_Port_Enable_default
+    read Ss_Single_Port_Enable
     case $Ss_Single_Port_Enable in
     	y) Ss_Single_Port_Enable="true";;
-		*) Ss_Single_Port_Enable="false";;
+    	n) Ss_Single_Port_Enable="false";;
+		*) Ss_Single_Port_Enable=$Ss_Single_Port_Enable_default;;
 	esac
-	read -p "             端口号（默认：8080     ）：" Ss_Single_Port
-	read -p "           认证密码（默认：hello    ）：" Ss_Password
-	read -p "     限制使用设备数（默认：不限制   ）：" Ss_Online_Limit
-	[[ -n $Ss_Online_Limit ]] && Ss_Online_Limit="${Ss_Online_Limit}#"
-	read -p "     用户限速值(K)：(默认：不限制   ）：" Ss_Speed_Limit
+	printf "             端口号（默认：%-*s）：\n"  $Default_Width $Ss_Single_Port_default
+	read Ss_Single_Port
+		[[ -z $Ss_Single_Port ]] && Ss_Single_Port=$Ss_Single_Port_default
+	printf "           认证密码（默认：%-*s）：\n"  $Default_Width $Ss_Password_default
+	read Ss_Password
+		[[ -z $Ss_Password ]] && Ss_Password=$Ss_Password_default
+	printf "     限制使用设备数（默认：%-*s）：\n"  $Default_Width $(if [[ -z $Ss_Online_Limit_default ]]; then echo "无限制"; else echo $Ss_Online_Limit_default; fi)
+	read Ss_Online_Limit
+	if [[ -z $Ss_Online_Limit ]]; then
+		Ss_Online_Limit=$Ss_Online_Limit_default
+	else
+		Ss_Online_Limit="${Ss_Online_Limit}#"
+	fi
+	
+	printf "     用户限速值(K)：(默认：%-*s）：\n"  $Default_Width $Ss_Speed_Limit_default
+	read Ss_Speed_Limit
+		[[ -z $Ss_Speed_Limit ]] && Ss_Speed_Limit=$Ss_Speed_Limit_default
 	echo
 }
 
@@ -432,7 +475,9 @@ Install_V2ray() {
 		echo -e "\r${prompt_error} 配置文件写入失败，正在退出安装程序"
 		exit 1
 	fi
-	systemctl restart v2ray 1>/dev/null 2>&1 && systemctl enable v2ray 1>/dev/null 2>&1
+	echo -n "正在启动V2ray..."
+	systemctl restart v2ray 1>/dev/null 2>&1
+	systemctl enable v2ray 1>/dev/null 2>&1
 	if [[ $? -eq 0 ]]; then
 		echo -e "${prompt_info} 已启动V2ray并设置开机自启\n"
 	else
@@ -487,7 +532,7 @@ Menu_Description() {
 	echo -e "  https://github.com/JadeVane/shell/issues"
 	echo -e "  https://www.wenjinyu.me/board\n"
 	echo -e "                         ${yellow}======== End =======${none}"
-	echo -e "                           ${green}c.${none} 更新脚本并运行"
+	echo -e "                           ${green}c.${none} 获取最新脚本并运行"
 	echo -e "                           ${green}m.${none} 返回主菜单"
 	echo -e "                           ${green}q.${none} 退出"
 	echo -e "                           -------------"
@@ -534,7 +579,7 @@ Menu(){
 	echo -e "   ${green}2.${none} 安装 V2Ray+Caddy"
 	echo -e "   ${green}3.${none} 安装 SSR（作为节点）"
 	echo -e "   ${green}4.${none} 启用 BBR（仅CentOS）\n"
-	echo -e "   ${green}d.${none} 说明（${yellow}首次使用先阅读${none}）\n"
+	echo -e "   ${green}d.${none} 说明（${yellow}务必先读${none}）\n"
 	echo -e "   ${green}q.${none} 退出"
 	echo -e "   ---------------------------------"
 	echo -ne "   请选择:"
