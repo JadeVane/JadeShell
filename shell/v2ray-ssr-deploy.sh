@@ -90,7 +90,7 @@ Pre_Config() {
 
 		sed -i '/^.*ntpdate*/d' /etc/crontab
 		echo '* * * * 1 ntpdate cn.pool.ntp.org > /dev/null 2>&1' >> /etc/crontab
-		echo -ne "\r正在重启crond进程..."
+		echo -ne "\r正在重启crond进程...        \b\b\b\b\b\b\b\b"
 		systemctl restart crond 1>/dev/null 2>/dev/null
 		echo -e "\r${prompt_info} 自动更新时间任务设置完成\n$prompt_info 时间同步完成\n"
 
@@ -491,7 +491,7 @@ Install_V2ray() {
 	fi
 
 	echo -n "开始安装v2ray-ssrpanel插件..."
-	curl -L -s https://raw.githubusercontent.com/ColetteContreras/v2ray-ssrpanel-plugin/master/install-release.sh | bash
+	bash <(curl -L -s https://raw.githubusercontent.com/ColetteContreras/v2ray-ssrpanel-plugin/master/install-release.sh) 1>/dev/null 2>/dev/null
 	if [[ $? -eq 0 ]]; then
 		echo -e "\r${prompt_info} 安装v2ray-ssrpanel插件完成"
 	else
