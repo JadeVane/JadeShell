@@ -87,19 +87,19 @@ Pre_Config() {
 
 Db_Config_Reader() {
 	echo "------------------- 数据库配置 -------------------"
-	printf "      数据库┬  地址（默认：%-*s）：\n" $Default_Width $Db_Host_default
+	printf "      数据库┬  地址（默认：%-*s）：" $Default_Width $Db_Host_default
     read Db_Host
 		[[ -z $Db_Host ]] && Db_Host=$Db_Host_default
-	printf "            ├─ 端口（默认：%-*s）：\n" $Default_Width $Db_Port_default
+	printf "            ├─ 端口（默认：%-*s）：" $Default_Width $Db_Port_default
 	read Db_Port
 		[[ -z $Db_Port ]] && Db_Port=$Db_Port_default
-	printf "            ├─ 名称（默认：%-*s）：\n" $Default_Width $Db_Name_default
+	printf "            ├─ 名称（默认：%-*s）：" $Default_Width $Db_Name_default
 	read Db_Name
 		[[ -z $Db_Name ]] && Db_Name=$Db_Name_default
-	printf "            ├─ 用户（默认：%-*s）：\n" $Default_Width $Db_User_default
+	printf "            ├─ 用户（默认：%-*s）：" $Default_Width $Db_User_default
 	read Db_User
 		[[ -z $Db_User ]] && Db_User=$Db_User_default
-	printf "            └─ 密码（默认：%-*s）：\n" $Default_Width $Db_Password_default
+	printf "            └─ 密码（默认：%-*s）：" $Default_Width $Db_Password_default
 	read Db_Password
 		[[ -z $Db_Password ]] && Db_Password=$Db_Password_default
 	echo
@@ -107,22 +107,22 @@ Db_Config_Reader() {
 
 V2ray_Config_Reader() {
 	echo "-------------------- v2ray配置 -------------------"
-	printf "           伪装域名（默认：%-*s）：\n" $Default_Width $V2ray_Domain_default
+	printf "           伪装域名（默认：%-*s）：" $Default_Width $V2ray_Domain_default
 	read V2ray_Domain
 		[[ -z $V2ray_Domain ]] && V2ray_Domain=$V2ray_Domain_default
-	printf "               路径（默认：%-*s）：\n" $Default_Width $V2ray_Path_default
+	printf "               路径（默认：%-*s）：" $Default_Width $V2ray_Path_default
 	read V2ray_Path
 		[[ -z $V2ray_Path ]] && V2ray_Path=$V2ray_Path_default
-	printf "             额外ID（默认：%-*s）：\n" $Default_Width $V2ray_Alter_Id_default
+	printf "             额外ID（默认：%-*s）：" $Default_Width $V2ray_Alter_Id_default
 	read V2ray_Alter_Id
 		[[ -z $V2ray_Alter_Id ]] && V2ray_Alter_Id=$V2ray_Alter_Id_default
-	printf "V2Ray端口，非80/443（默认：%-*s）：\n" $Default_Width $V2ray_Port_default
+	printf "V2Ray端口，非80/443（默认：%-*s）：" $Default_Width $V2ray_Port_default
 	read V2ray_Port
 		[[ -z $V2ray_Port ]] && V2ray_Port=$V2ray_Port_default
-	printf "   ssrpanel同步端口（默认：%-*s）：\n"  $Default_Width $V2ray_Ssrpanel_Port_default
+	printf "   ssrpanel同步端口（默认：%-*s）："  $Default_Width $V2ray_Ssrpanel_Port_default
 	read V2ray_Ssrpanel_Port
 		[[ -z $V2ray_Ssrpanel_Port ]] && V2ray_Ssrpanel_Port=$V2ray_Ssrpanel_Port_default
-	printf "            Node ID（默认：%-*s）：\n" $Default_Width $Node_Id_default
+	printf "            Node ID（默认：%-*s）：" $Default_Width $Node_Id_default
 	read Node_Id
 		[[ -z $Node_Id ]] && Node_Id=$Node_Id_default
 	echo
@@ -132,7 +132,7 @@ SSR_Config_Reader() {
 	display_info="--------------------- SSR配置 --------------------\n"
 	echo $display_info
 	echo -ne "1. none（默认）\n2. rc4-md5\n3. aes-256-cfb\n4. chacha20\n\n"
-	printf "     请选择加密方式（默认：%-*s）：\n" $Default_Width $Ss_Method_default
+	printf "     请选择加密方式（默认：%-*s）：" $Default_Width $Ss_Method_default
 	read -n1 Ss_Method
 	case $Ss_Method in
 		1) Ss_Method="none";;
@@ -144,7 +144,7 @@ SSR_Config_Reader() {
 	clear
 	display_info="$display_info`printf '     已选择加密方式（默认：%-*s）：%s' $Default_Width $Ss_Method_default $Ss_Method`\n"
 	echo -ne "$display_info--------------------\n1. origin（默认）\n2. auth_sha1_v4\n3. auth_aes128_md5\n4. auth_chain_a\n\n"
-	printf "     请选择传输协议（默认：%-*s）：\n" $Default_Width $Ss_Protocol_default
+	printf "     请选择传输协议（默认：%-*s）：" $Default_Width $Ss_Protocol_default
 	read -n1 Ss_Protocol
 	case $Ss_Protocol in
 		1) Ss_Protocol="origin";;
@@ -156,7 +156,7 @@ SSR_Config_Reader() {
 	clear
 	display_info="$display_info`printf '     已选择传输协议（默认：%-*s）：'$Default_Width $Ss_Protocol_default $Ss_Protocol`\n"
 	echo -ne "$display_info--------------------\n1. plain（默认）\n2. http_simple\n3. http_post\n4. tls1.2_ticket_auth\n\n"
-	printf "     请选择混淆方式（默认：%-*s）：\n" $Default_Width $Ss_Obfs_default
+	printf "     请选择混淆方式（默认：%-*s）：" $Default_Width $Ss_Obfs_default
 	read -n1 Ss_Obfs
 	case $Ss_Obfs in
 		1) Ss_Obfs="plain";;
@@ -168,26 +168,26 @@ SSR_Config_Reader() {
 	clear
 	display_info="$display_info`printf '          已选择混淆方式（默认：%-*s）：' $Default_Width $Ss_Obfs_default $Ss_Obfs`\n"
 	echo -e "$display_info"
-	printf "            Node ID（默认：%-*s）：\n"  $Default_Width $Node_Id_default
+	printf "            Node ID（默认：%-*s）："  $Default_Width $Node_Id_default
 	read Node_Id
 		[[ -z $Node_Id ]] && Node_Id=$Node_Id_default
-	printf "       流量计算比例（默认：%-*s）：\n"  $Default_Width $Ss_Transfer_Ratio_default
+	printf "       流量计算比例（默认：%-*s）："  $Default_Width $Ss_Transfer_Ratio_default
 	read Ss_Transfer_Ratio
 		[[ -z $Ss_Transfer_Ratio ]] && Ss_Transfer_Ratio=$Ss_Transfer_Ratio_default
-	printf "是否强制单端口[y/n]（默认：%-*s）：\n"  $Default_Width $Ss_Single_Port_Enable_default
+	printf "是否强制单端口[y/n]（默认：%-*s）："  $Default_Width $Ss_Single_Port_Enable_default
     read Ss_Single_Port_Enable
     case $Ss_Single_Port_Enable in
     	y) Ss_Single_Port_Enable="true";;
     	n) Ss_Single_Port_Enable="false";;
 		*) Ss_Single_Port_Enable=$Ss_Single_Port_Enable_default;;
 	esac
-	printf "             端口号（默认：%-*s）：\n"  $Default_Width $Ss_Single_Port_default
+	printf "             端口号（默认：%-*s）："  $Default_Width $Ss_Single_Port_default
 	read Ss_Single_Port
 		[[ -z $Ss_Single_Port ]] && Ss_Single_Port=$Ss_Single_Port_default
-	printf "           认证密码（默认：%-*s）：\n"  $Default_Width $Ss_Password_default
+	printf "           认证密码（默认：%-*s）："  $Default_Width $Ss_Password_default
 	read Ss_Password
 		[[ -z $Ss_Password ]] && Ss_Password=$Ss_Password_default
-	printf "     限制使用设备数（默认：%-*s）：\n"  $Default_Width $(if [[ -z $Ss_Online_Limit_default ]]; then echo "无限制"; else echo $Ss_Online_Limit_default; fi)
+	printf "     限制使用设备数（默认：%-*s）："  $Default_Width $(if [[ -z $Ss_Online_Limit_default ]]; then echo "无限制"; else echo $Ss_Online_Limit_default; fi)
 	read Ss_Online_Limit
 	if [[ -z $Ss_Online_Limit ]]; then
 		Ss_Online_Limit=$Ss_Online_Limit_default
@@ -195,7 +195,7 @@ SSR_Config_Reader() {
 		Ss_Online_Limit="${Ss_Online_Limit}#"
 	fi
 	
-	printf "     用户限速值(K)：(默认：%-*s）：\n"  $Default_Width $Ss_Speed_Limit_default
+	printf "     用户限速值(K)：(默认：%-*s）："  $Default_Width $Ss_Speed_Limit_default
 	read Ss_Speed_Limit
 		[[ -z $Ss_Speed_Limit ]] && Ss_Speed_Limit=$Ss_Speed_Limit_default
 	echo
