@@ -70,7 +70,7 @@ systemctl() {
 }
 
 Pre_Config() {
-	if [[ pre_config_status -eq 0 ]]; then
+	if [[ $pre_config_status -eq 0 ]]; then
 		echo "--------------------- 预配置 ---------------------"
 		[[ -f `which yum` ]] && echo -n "开始安装epel..." && $cmd -y install epel-release 1>/dev/null 2>/dev/null && echo -e "\r$prompt_info epel安装完成"
 
@@ -232,11 +232,12 @@ Firewall_Setting() {
 		echo -e "${prompt_info} 检测到系统已安装firewalld，开始进行防火墙配置"
 		systemctl status firewalld 2>&1 1>/dev/null
 		if [ $? -eq 0 ]; then
+			echo -e "${prompt_info} 开始放行端口"
 			firewall-cmd --permanent --zone=public --remove-port=443/tcp 2>&1 1>/dev/null
 			firewall-cmd --permanent --zone=public --remove-port=80/tcp 2>&1 1>/dev/null
 			firewall-cmd --permanent --zone=public --add-port=443/tcp 2>&1 1>/dev/null
 			firewall-cmd --permanent --zone=public --add-port=80/tcp 2>&1 1>/dev/null
-			echo -e "$prompt_info 已放行端口：80, 443"
+			echo -e "\r$prompt_info 已放行端口：80, 443"
 			if [[ $V2ray_Port ]]; then
 				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/tcp 2>&1 1>/dev/null
 				firewall-cmd --permanent --zone=public --remove-port=${V2ray_Port}/udp 2>&1 1>/dev/null
@@ -320,6 +321,7 @@ Install_Caddy() {
 
 	local caddy_dir="/tmp/caddy_install/"
 	local caddy_installer="/tmp/caddy_install/caddy.tar.gz"
+	mkdir -p $caddy_dir
 
 	echo -ne "开始匹配安装包"
 	if [[ $sys_bit == "i386" || $sys_bit == "i686" ]]; then
@@ -340,7 +342,6 @@ Install_Caddy() {
 	fi
 
 	echo -n "正在解压Caddy安装包..."
-	mkdir -p $caddy_dir
 	tar zxf $caddy_installer -C $caddy_dir 1>/dev/null 2>/dev/null
 	if [ $? -eq 0 ]; then
 		echo -e "\r$prompt_info Caddy安装包解压完成"
