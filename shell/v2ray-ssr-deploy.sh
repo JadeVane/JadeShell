@@ -140,7 +140,7 @@ V2ray_Config_Reader() {
 
 	# v2ray独立运行余下数据
 	if [[ $menu_picking -eq 1 ]]; then
-		printf "    用户邮箱（默认：%-*s）：" $Default_Width $V2ray_Email_default
+		printf "           用户邮箱（默认：%-*s）：" $Default_Width $V2ray_Email_default
 		read V2ray_Email
 			[[ -z $V2ray_Email ]] && V2ray_Email=$V2ray_Email_default
 	fi
@@ -546,6 +546,9 @@ Install_V2ray_Only() {
 		echo -e "\r${prompt_error} 获取V2ray配置文件失败，正在退出安装程序..."
 		exit 1
 	fi
+
+	echo -e "${prompt_warning} v2ray目前不存在任何用户，是否新建用户（y/n)"
+
 	echo -n "开始配置V2ray..."
 	sed -i  -e "s/V2ray_Port/$V2ray_Port/g" \
 			-e "s/V2ray_Alter_Id/$V2ray_Alter_Id/g" \
@@ -553,9 +556,9 @@ Install_V2ray_Only() {
 			-e "s/V2ray_Domain/$V2ray_Domain/g" \
 			-e "s/V2ray_Email/$V2ray_Email/g" \
 			-e "s/V2ray_Path/$V2ray_Path/g" config.json
-	echo -n "正在新建用户..."
+	echo -ne "\r正在新建用户..."
 	V2ray_UUID=`/usr/bin/v2ray/v2ctl uuid`
-	sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"}'
+	sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"}' /etc/v2ray/config.json
 	echo -e "\r${prompt_info} 新建用户完成"
 	echo -e "${prompt_warning} 用户信息如下：\n------------------------------\n      id : $V2ray_UUID\n   level : 0\nalter ID : $V2ray_Alter_Id\n   email : $V2ray_Email\n------------------------------"
 	mv -f config.json /etc/v2ray/
@@ -579,51 +582,77 @@ Install_V2ray_Only() {
 }
 
 V2rayManagement_DisplayInfo() {
-	echo -n "正在获取配置信息..."
+	echo -e "$copyright_info"
+	echo -n "   正在获取配置信息..."
 	[[ ! -f /etc/v2ray/config.json ]] && echo -e "\r${prompt_error} 用户配置文件（/etc/v2ray/config.json）不存在，正在退出程序..." && exit 1
 
 	# 获取用户信息
 	ids=`grep \"id\" /etc/v2ray/config.json | wc -l`
-	v2rayManage_users_info="序号                 id                    level  alterId         email\n--------------------------------------------------------------------------------------\n"
+	v2rayManage_users_info="\r   获取用户信息如下：\n序号                 id                    level  alterId    email\n--------------------------------------------------------------------------------------\n"
 	if [[ $ids -eq 0 ]]; then
-		echo "${v2rayManage_users_info}无用户\n--------------------------------------------------------------------------------------\n"
+		echo -e "${v2rayManage_users_info}无用户\n--------------------------------------------------------------------------------------\n"
 	else
 		for (( id_count = 1; id_count <= ids; id_count++ )); do
-			v2rayManage_id[$id_count]=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $6}'`
-			v2rayManage_level=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $9}' | grep -o "[0-9]*"`
-			v2rayManage_alterid=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $11}' | grep -o "[0-9]*"`
-			v2rayManage_email=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $14}'`
-			v2rayManage_users_info="$v2rayManage_users_info${green}${id_count}.${none} $v2rayManage_id    v2rayManage_level       $v2rayManage_alterid     $v2rayManage_email\n"
+			v2rayManage_id[$id_count]=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $4}'`
+			v2rayManage_level=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $7}' | grep -o "[0-9]*"`
+			v2rayManage_alterid=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $9}' | grep -o "[0-9]*"`
+			v2rayManage_email=`grep \"id\" /etc/v2ray/config.json | awk -F '"' '{print $12}'`
+			v2rayManage_users_info="${v2rayManage_users_info}${green}${id_count}${none}   ${v2rayManage_id[$id_count]}  ${v2rayManage_level}       ${v2rayManage_alterid}${v2rayManage_email}\n"
 		done
-		v2rayManage_users_info="$v2rayManage_users_info--------------------------------------------------------------------------------------\n"
+		v2rayManage_users_info="${v2rayManage_users_info}--------------------------------------------------------------------------------------\n"
 		echo -ne "$v2rayManage_users_info"
 	fi
+	if [[ $v2ray_manage_picking -eq 1 ]]; then
+		echo -ne "\n   ${green}1.${none} 继续添加用户\n   ${green}2.${none} 返回v2ray管理菜单\n\n   ${green}m.${none} 返回主菜单\n\n   ${green}q.${none} 退出\n   ---------------------\n   请选择操作："
+		read -n1 $v2ray_manage_picking
+		case $v2ray_manage_picking in
+			1) clear
+			   V2rayManagement_Adduser;;
+			2) clear
+			   Menu_V2rayManagement;;
+			q) exit 0;;
+			*) clear
+			   Menu;;
+		esac
+	fi
+	read -n1 -p "按下ENTER返回主菜单"
+	Menu
 }
 
 V2rayManagement_Adduser() {
+	echo -e "$copyright_info"
 	echo "正在添加用户，请输入以下信息："
 	printf "             额外ID（默认：%-*s）：" $Default_Width $V2ray_Alter_Id_default
 	read V2ray_Alter_Id
 		[[ -z $V2ray_Alter_Id ]] && V2ray_Alter_Id=$V2ray_Alter_Id_default
-	printf "    用户邮箱（默认：%-*s）：" $Default_Width $V2ray_Email_default
+	printf "           用户邮箱（默认：%-*s）：" $Default_Width $V2ray_Email_default
 	read V2ray_Email
 		[[ -z $V2ray_Email ]] && V2ray_Email=$V2ray_Email_default
 	V2ray_UUID=`/usr/bin/v2ray/v2ctl uuid`
 
-	echo -n "开始添加用户..."
-	if [[ `grep "\"id\":" v2ray-config.json | wc -L` ]]; then
-		sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"},' 
+	echo -n "\n正在添加用户..."
+	var_useradd="        {\"id\": \"$V2ray_UUID\", \"level\": 0, \"alterId\": $V2ray_Alter_Id, \"email\": \"$V2ray_Email\"}"
+	if [[ `grep "\"id\":" /etc/v2ray/config.json | wc -L` ]]; then
+		sed -i "/\"clients\"/a${var_useradd}," /etc/v2ray/config.json
 	else
-		sed -i '/"clients": [/a\        {"id": "$V2ray_UUID", "level": 0, "alterId": $V2ray_Alter_Id, "email": "$V2ray_Email"}'
+		sed -i "/\"clients\"/a${var_useradd}" /etc/v2ray/config.json
 	fi
-	systemctl restart v2ray
+	echo -n "\t添加用户完成，正在启动V2ray..."
+	systemctl restart v2ray 1>/dev/null 2>/dev/null
 
-	echo -e "${prompt_info} 添加用户完成\n${prompt_warning} 用户信息如下：\n------------------------------\n      id : $V2ray_UUID\n   level : 0\nalter ID : $V2ray_Alter_Id\n   email : $V2ray_Email\n------------------------------\n"
-	echo -e "请选择操作：\n${green}m.${none}返回主菜单\n${green}2.${none}退出"
+	echo -e "${prompt_info} 添加用户完成          \n${prompt_warning} 用户信息如下：\n------------------------------\n      id : $V2ray_UUID\n   level : 0\nalter ID : $V2ray_Alter_Id\n   email : $V2ray_Email\n------------------------------\n"
+	echo -ne "\n   ${green}1.${none} 继续添加用户\n   ${green}2.${none} 显示所有用户详情\n   ${green}3.${none} 返回v2ray管理菜单\n\n   ${green}m.${none} 返回主菜单\n\n   ${green}q.${none} 退出\n   请选择操作："
 	read -n1 v2raymanage_picking
 	case $v2raymanage_picking in
-		q) exit 0;;
-		*) Menu;;
+		1) clear
+		   V2rayManagement_Adduser;;
+		2) clear
+		   V2rayManagement_DisplayInfo;;
+		3) clear
+		   Menu_V2rayManagement;;
+		q) exit 1;;
+		*) clear
+		   Menu;;
 	esac
 }
 
@@ -631,7 +660,6 @@ V2rayManagement_Deluser() {
 	[[ $ids -eq 0 ]] && echo -e "无用户可删除"
 	# ++++++++ 缺少：判断是否返回主菜单 ++++++
 	Menu_V2rayManagement
-
 }
 
 #============ 菜单选项 ============
@@ -663,13 +691,11 @@ Menu_Install_SSR(){
 }
 
 Menu_Open_BBR(){
-	cd
-	wget -N --no-check-certificate "https://raw.githubusercontent.com/JadeVane/shell/master/others/bbr_tcp_mod.sh"
-	bash bbr_tcp_mod.sh
+	sudo rpm --import https://www.elrepo.org/RPM-GPG-KEY-elrepo.org 2>/dev/null 1>/dev/null
+	sudo rpm -Uvh http://www.elrepo.org/elrepo-release-7.0-2.el7.elrepo.noarch.rpm
 }
 
 Menu_V2rayManagement() {
-	clear
 	echo -e "$copyright_info"
 	if [[ -n `grep "\"ssrpanel\"" /etc/v2ray/config.json` ]]; then
 		echo -e "${red}警告：${none} 检测到v2ray已作为ssrpanl节点安装，通过此脚本对用户的操作将无法在面板查询到相关信息\n是否继续？[y/n]"
@@ -679,14 +705,16 @@ Menu_V2rayManagement() {
 		n) Menu;;
 		esac
 	fi
-	echo -e "   --------- V2ray用户管理 ---------"
-	echo "   ${green}1.${none} 添加用户\n   ${green}2.${none} 删除用户\n   ${green}m.${none} 返回主菜单\n   ------------------\n   请选择需要进行的操作："
+	echo -ne "   --------- V2ray用户管理 ---------\n   ${green}1.${none} 显示所有用户详情\n   ${green}2.${none} 添加用户\n   ${green}3.${none} 删除用户\n\n   ${green}m.${none} 返回主菜单\n\n   ${green}q.${none} 退出\n   ------------------\n   请选择需要进行的操作："
 	read -n1 v2ray_manage_picking
 	echo
 	case $v2ray_manage_picking in
-		1) V2rayManagement_Adduser;;
-		2) V2rayManagement_Deluser;;
+		1) clear
+		   V2rayManagement_DisplayInfo;;
+		2) V2rayManagement_Adduser;;
+		3) V2rayManagement_Deluser;;
 		m) Menu;;
+		q) exit 0;;
 	esac
 }
 
@@ -741,7 +769,8 @@ picking() {
 
 Menu(){
 	clear
-	copyright_info="===========================================\n       ${button} SSRPanel V2ray节点一键部署脚本 ${none} v1.0\n\n     ${green}系统要求：CentOS 7+ or Ubuntu 14+\n     更新地址：https://www.wenjinyu.me${none}\n===========================================\n"
+	Init_Value
+	copyright_info="===========================================\n       ${button} SSRPanel V2ray节点一键部署脚本 ${none} v0.1\n\n     ${green}系统要求：CentOS 7+ or Ubuntu 14+\n     更新地址：https://www.wenjinyu.me${none}\n===========================================\n"
 	echo -e "$copyright_info"
 	echo -e "   ------------- 主菜单 ------------"
 	echo -e "   ${green}1.${none} 安装 V2Ray（独立运行）"
