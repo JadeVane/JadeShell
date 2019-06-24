@@ -416,7 +416,7 @@ Install_SSR() {
 	echo -ne "开始下载SSR..."
 	cd /usr/
 	rm -rf /usr/shadowsocksr
-	git clone -b master https://github.com/JadeVane/shadowsocksr.git 1>/dev/null 2>/dev/null
+	git clone -b manyuser https://github.com/JadeVane/shadowsocksr.git 1>/dev/null 2>/dev/null
 	if [[ $? -eq 0 ]]; then
 		echo -e "\r$prompt_info 下载SSR成功   "
 	else
