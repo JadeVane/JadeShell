@@ -8,7 +8,7 @@
 <br>
 本项目包含：
 
-### v2ray-ssr-deploy-and-management.sh
+### 1. v2ray-ssr-deploy-and-management.sh
 
 简介：v2ray、ssr安装及管理，包含`ssrpanel节点类型`和`独立运行类型`
 
