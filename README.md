@@ -8,6 +8,16 @@
 <br>
 本项目包含：
 
-脚本|说明
--|-
-v2ray-ssr-deploy-and-management.sh|v2ray、ssr安装及管理，包含`ssrpanel节点类型`和`独立运行类型`
+### v2ray-ssr-deploy-and-management.sh
+
+简介：v2ray、ssr安装及管理，包含`ssrpanel节点类型`和`独立运行类型`
+
+使用：
+
+```bash
+bash <(curl -L -s https://raw.githubusercontent.com/JadeVane/shell/master/shell/v2ray-ssr-deploy.sh)
+```
+
+> **注意：**
+>
+> v2ray管理功能未完成
